@@ -12,15 +12,30 @@ export default async function FindLeadsPage() {
   const supabase = await createClient();
   const { apiKey, dailyLimit } = getPlacesConfig();
 
-  const [usage, staleCount, runsResult] = await Promise.all([
-    getUsageToday(supabase, dailyLimit),
-    countStaleLeads(supabase),
-    supabase
-      .from("search_runs")
-      .select("id, trade, city, state, radius_m, results_found, new_leads_added, created_at")
-      .order("created_at", { ascending: false })
-      .limit(10),
-  ]);
+  let data;
+  try {
+    data = await Promise.all([
+      getUsageToday(supabase, dailyLimit),
+      countStaleLeads(supabase),
+      supabase
+        .from("search_runs")
+        .select("id, trade, city, state, radius_m, results_found, new_leads_added, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+  } catch (error) {
+    console.error("find page:", error instanceof Error ? error.message : error);
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight">Find leads</h1>
+        <p role="alert" className="alert-error">
+          The database is missing something this page needs. Check that every file in supabase/migrations has been
+          applied, then reload.
+        </p>
+      </div>
+    );
+  }
+  const [usage, staleCount, runsResult] = data;
   const runs = runsResult.data ?? [];
 
   return (

@@ -24,7 +24,7 @@ Private, single-user tool that finds, scores, ranks and tracks local-business pr
 2. **Review, then apply the migrations** in `supabase/migrations/`, in filename order. Paste each file into the SQL editor, or use the Supabase CLI (`supabase link` then `supabase db push`).
    - `20261007141435_initial_schema.sql`: enums, the `leads`, `outreach_log`, `search_runs` and `suppression` tables, indexes
    - `20261007141444_rls_and_signup_lock.sql`: RLS policies and the signup lock trigger
-   - `20261007150000_places_usage.sql`: daily Places request counter and its reserve function
+   - `20261007170640_places_usage.sql`: daily Places request counter and its reserve function
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
