@@ -35,6 +35,11 @@ export type Database = {
           last_refreshed_at: string;
           last_contacted_at: string | null;
           next_follow_up_at: string | null;
+          site_status: "none" | "social" | "dead" | "parked" | "blocked" | "ok" | null;
+          scored_at: string | null;
+          scoring_started_at: string | null;
+          score_attempts: number;
+          score_error: string | null;
         };
         Insert: {
           id?: string;
@@ -62,6 +67,11 @@ export type Database = {
           last_refreshed_at?: string;
           last_contacted_at?: string | null;
           next_follow_up_at?: string | null;
+          site_status?: "none" | "social" | "dead" | "parked" | "blocked" | "ok" | null;
+          scored_at?: string | null;
+          scoring_started_at?: string | null;
+          score_attempts?: number;
+          score_error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
@@ -164,6 +174,10 @@ export type Database = {
       reserve_places_requests: {
         Args: { requested: number; daily_limit: number };
         Returns: { allowed: boolean; used: number }[];
+      };
+      set_lead_priorities: {
+        Args: { payload: Json };
+        Returns: number;
       };
     };
     Enums: {

@@ -1,5 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+// Same typeface as jtbuildsco.com. Weights capped at 500, as on the site.
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "JT Builds Co Lead Engine",
@@ -8,10 +12,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export const viewport: Viewport = { themeColor: "#161826", colorScheme: "dark" };
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
-      <body className="min-h-dvh font-sans">{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-dvh">{children}</body>
     </html>
   );
 }

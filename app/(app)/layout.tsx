@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
+import { BrandMark } from "@/components/BrandMark";
+import { ScoringProvider, ScoringStatus } from "@/components/ScoringProvider";
 import { requireOwner } from "@/lib/session";
 import { signOut } from "./actions";
 
@@ -8,21 +11,24 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const owner = await requireOwner();
 
   return (
-    <>
+    <ScoringProvider>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-sm focus:border focus:border-accent-500 focus:bg-surface focus:px-4 focus:py-3 focus:text-xs focus:tracking-[0.18em] focus:uppercase"
       >
         Skip to content
       </a>
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="text-base font-bold tracking-tight">JT Builds Co Lead Engine</span>
+      <header className="sticky top-0 z-10 bg-bg">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-1 px-4 py-2">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-1">
+            <Link href="/dashboard" className="inline-flex min-h-11 items-center transition-opacity hover:opacity-70">
+              <BrandMark height={30} />
+              <span className="ml-3 hidden text-xs tracking-[0.2em] text-muted uppercase sm:inline">Lead Engine</span>
+            </Link>
             <AppNav />
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-600 sm:inline">{owner.email}</span>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-muted md:inline">{owner.email}</span>
             <form action={signOut}>
               <button type="submit" className="btn-secondary">
                 Sign out
@@ -30,10 +36,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </form>
           </div>
         </div>
+        <ScoringStatus />
+        <div className="rule-fade" aria-hidden="true" />
       </header>
-      <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-8 focus:outline-none">
         {children}
       </main>
-    </>
+    </ScoringProvider>
   );
 }

@@ -7,6 +7,7 @@ import {
   type SearchSummary,
   type State,
 } from "@/lib/find-leads-config";
+import { recomputeDerived } from "@/lib/derived";
 import { planImport } from "@/lib/lead-import";
 import { distanceMeters, locateTown, searchTextPage, toLeadFields, type Place } from "@/lib/places";
 import { DailyLimitError, reservePlacesRequest } from "@/lib/places-usage";
@@ -90,14 +91,14 @@ export async function runSearch(
   const [suppressionResult, existingResult] = await Promise.all([
     supabase.from("suppression").select("phone, email, business_name"),
     leads.length
-      ? supabase.from("leads").select("place_id").in("place_id", leads.map((l) => l.place_id))
+      ? supabase.from("leads").select("place_id, website_url").in("place_id", leads.map((l) => l.place_id))
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (suppressionResult.error) throw new Error(`Could not load suppression list: ${suppressionResult.error.message}`);
   if (existingResult.error) throw new Error(`Could not check existing leads: ${existingResult.error.message}`);
 
   const plan = planImport(leads, {
-    existingPlaceIds: new Set((existingResult.data ?? []).map((r) => r.place_id)),
+    existing: new Map((existingResult.data ?? []).map((r) => [r.place_id, r.website_url])),
     isSuppressed: buildSuppressionMatcher(suppressionResult.data ?? []),
     trade: input.trade,
     sourceQuery: query,
@@ -115,10 +116,18 @@ export async function runSearch(
     if (error) throw new Error(`Could not save new leads: ${error.message}`);
     for (const row of data ?? []) insertedIds.add(row.place_id);
   }
-  if (plan.updates.length) {
-    const { error } = await supabase.from("leads").upsert(plan.updates, { onConflict: "place_id" });
+  // A bulk upsert writes the union of all rows' keys and fills missing keys
+  // with NULL, so rows that reset the score and rows that keep it must be
+  // sent separately or the second kind would lose their scores.
+  const websiteChanged = plan.updates.filter((u) => "score_total" in u);
+  const websiteSame = plan.updates.filter((u) => !("score_total" in u));
+  for (const group of [websiteChanged, websiteSame]) {
+    if (!group.length) continue;
+    const { error } = await supabase.from("leads").upsert(group, { onConflict: "place_id" });
     if (error) throw new Error(`Could not refresh existing leads: ${error.message}`);
   }
+
+  await recomputeDerived(supabase, { placeIds: [...insertedIds, ...plan.updates.map((u) => u.place_id)] });
 
   const { error: runError } = await supabase.from("search_runs").insert({
     trade: input.trade,

@@ -14,7 +14,7 @@ export function AppNav() {
 
   return (
     <nav aria-label="Main">
-      <ul className="flex gap-1">
+      <ul className="flex gap-5">
         {LINKS.map(({ href, label }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
@@ -22,11 +22,11 @@ export function AppNav() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium ${
-                  active ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+                className={`inline-flex min-h-11 items-center text-xs font-medium tracking-[0.2em] uppercase transition-colors ${
+                  active ? "text-accent-500" : "text-neutral-200 hover:text-accent-500"
                 }`}
               >
-                {label}
+                <span className={active ? "border-b border-accent-500 pb-0.5" : undefined}>{label}</span>
               </Link>
             </li>
           );

@@ -34,10 +34,10 @@ export function RefreshStalePanel({ staleCount }: { staleCount: number }) {
 
   return (
     <section className="card space-y-3" aria-labelledby="refresh-heading">
-      <h2 id="refresh-heading" className="text-lg font-semibold">
+      <h2 id="refresh-heading" className="text-lg font-medium">
         Refresh stale leads
       </h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         Google data on a lead (name, phone, website, reviews) is re-fetched after 30 days. Each lead uses one Places
         request.
       </p>

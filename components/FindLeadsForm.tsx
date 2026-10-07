@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useScoring } from "@/components/ScoringProvider";
 import {
   DEFAULT_RADIUS_METERS,
   MAX_BULK_TOWNS,
@@ -23,6 +24,7 @@ type TownResult = { town: Town; status: TownStatus; summary?: SearchSummary; mes
 
 export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
   const router = useRouter();
+  const scoring = useScoring();
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [tradeChoice, setTradeChoice] = useState<string>(TRADE_PRESETS[0]);
   const [customTrade, setCustomTrade] = useState("");
@@ -57,6 +59,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
     if (remaining === 0) return setFormError(`Daily Places limit reached (${usage.used} of ${usage.limit}). It resets at midnight Eastern.`);
 
     stopRequested.current = false;
+    let newLeads = 0;
     setRunning(true);
     setResults(towns.map((town) => ({ town, status: "pending" })));
 
@@ -72,6 +75,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
 
       if (outcome.ok) {
         updateResult(i, { status: "done", summary: outcome.summary });
+        newLeads += outcome.summary.newLeads;
         if (outcome.summary.limitReached) {
           updateResult(i, { message: "Daily limit reached partway; results so far were saved." });
           skipFrom(i + 1, "Daily limit reached.");
@@ -88,6 +92,8 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
 
     setRunning(false);
     router.refresh(); // update recent searches and stale count
+    // New leads with websites join the scoring queue; start working through it.
+    if (newLeads > 0) scoring.start();
   }
 
   function skipFrom(start: number, message: string) {
@@ -100,7 +106,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
   return (
     <section className="card space-y-5" aria-labelledby="search-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="search-heading" className="text-lg font-semibold">
+        <h2 id="search-heading" className="text-lg font-medium">
           Search
         </h2>
         <fieldset className="flex gap-1" disabled={running}>
@@ -108,8 +114,10 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
           {(["single", "bulk"] as const).map((m) => (
             <label
               key={m}
-              className={`inline-flex min-h-11 cursor-pointer items-center rounded-md border px-3 text-sm font-medium has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-blue-700 ${
-                mode === m ? "border-slate-900 bg-slate-900 text-white" : "border-slate-500 bg-white text-slate-900"
+              className={`inline-flex min-h-11 cursor-pointer items-center rounded-md border px-4 text-xs font-medium tracking-[0.18em] uppercase transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-3 has-focus-visible:outline-accent-500 ${
+                mode === m
+                  ? "border-accent-500 bg-accent-500/12 text-accent-400"
+                  : "border-neutral-500 text-neutral-200 hover:border-neutral-300"
               }`}
             >
               <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => setMode(m)} className="sr-only" />
@@ -189,7 +197,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
                 aria-describedby="towns-hint"
                 disabled={running}
               />
-              <p id="towns-hint" className="mt-1 text-sm text-slate-600">
+              <p id="towns-hint" className="mt-1 text-sm text-muted">
                 Add &quot;, NH&quot; or &quot;, RI&quot; to override the state below. Up to {MAX_BULK_TOWNS} towns; they run
                 one after another.
               </p>
@@ -233,7 +241,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
           </div>
         </div>
 
-        <div className="rounded-md bg-slate-100 p-3 text-sm" aria-live="polite">
+        <div className="alert-info" aria-live="polite">
           <p>
             <strong>Estimate:</strong> up to {estimate} Places request{estimate === 1 ? "" : "s"}
             {towns.length > 0 && ` (${towns.length} town${towns.length === 1 ? "" : "s"} × up to ${MAX_REQUESTS_PER_TOWN})`}.
@@ -242,7 +250,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
             Used today: {usage.used} of {usage.limit}. {remaining} left.
           </p>
           {estimate > remaining && remaining > 0 && (
-            <p className="mt-1 font-medium text-amber-900">
+            <p className="mt-1 font-medium text-warning">
               This may stop partway. Results from finished pages are still saved.
             </p>
           )}
@@ -291,7 +299,7 @@ function TownResultCard({ result }: { result: TownResult }) {
   if (status !== "done" || !summary) {
     const text = { pending: "Waiting", running: "Searching…", error: message ?? "Failed", skipped: message ?? "Skipped", done: "" }[status];
     return (
-      <div className={`rounded-md border p-3 text-sm ${status === "error" ? "border-red-300 bg-red-50 text-red-800" : "border-slate-200"}`}>
+      <div className={`rounded-md border p-3 text-sm ${status === "error" ? "border-danger/40 bg-danger/10 text-danger" : "border-divider"}`}>
         <span className="font-medium">{label}:</span> {text}
       </div>
     );
@@ -304,17 +312,17 @@ function TownResultCard({ result }: { result: TownResult }) {
   ].filter(Boolean);
 
   return (
-    <details className="rounded-md border border-slate-200 p-3 text-sm">
+    <details className="rounded-md border border-divider p-3 text-sm">
       <summary className="cursor-pointer">
         <span className="font-medium">{label}:</span> {summary.resultsFound} found, {summary.newLeads} new,{" "}
         {summary.updatedLeads} already in list. {summary.requestsUsed} requests.
-        {skipped.length > 0 && <span className="text-slate-600"> Skipped: {skipped.join(", ")}.</span>}
-        {message && <span className="font-medium text-amber-900"> {message}</span>}
+        {skipped.length > 0 && <span className="text-muted"> Skipped: {skipped.join(", ")}.</span>}
+        {message && <span className="font-medium text-warning"> {message}</span>}
       </summary>
       {summary.businesses.length > 0 && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="text-slate-600">
+            <thead className="text-muted">
               <tr>
                 <th scope="col" className="py-1 pr-3 font-medium">Business</th>
                 <th scope="col" className="py-1 pr-3 font-medium">Town</th>
@@ -323,7 +331,7 @@ function TownResultCard({ result }: { result: TownResult }) {
                 <th scope="col" className="py-1 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-divider">
               {summary.businesses.map((b) => (
                 <tr key={b.place_id}>
                   <td className="py-1 pr-3">{b.business_name}</td>

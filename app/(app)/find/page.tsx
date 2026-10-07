@@ -27,7 +27,7 @@ export default async function FindLeadsPage() {
     console.error("find page:", error instanceof Error ? error.message : error);
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Find leads</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Find leads</h1>
         <p role="alert" className="alert-error">
           The database is missing something this page needs. Check that every file in supabase/migrations has been
           applied, then reload.
@@ -40,7 +40,7 @@ export default async function FindLeadsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Find leads</h1>
+      <h1 className="text-2xl font-medium tracking-tight">Find leads</h1>
 
       {!apiKey && (
         <p role="alert" className="alert-error">
@@ -53,15 +53,15 @@ export default async function FindLeadsPage() {
       <RefreshStalePanel staleCount={staleCount} />
 
       <section className="card space-y-3" aria-labelledby="runs-heading">
-        <h2 id="runs-heading" className="text-lg font-semibold">
+        <h2 id="runs-heading" className="text-lg font-medium">
           Recent searches
         </h2>
         {runs.length === 0 ? (
-          <p className="text-sm text-slate-600">No searches yet.</p>
+          <p className="text-sm text-muted">No searches yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-slate-600">
+              <thead className="text-muted">
                 <tr>
                   <th scope="col" className="py-2 pr-3 font-medium">When</th>
                   <th scope="col" className="py-2 pr-3 font-medium">Trade</th>
@@ -71,7 +71,7 @@ export default async function FindLeadsPage() {
                   <th scope="col" className="py-2 text-right font-medium">New</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-divider">
                 {runs.map((run) => (
                   <tr key={run.id}>
                     <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(run.created_at)}</td>

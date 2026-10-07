@@ -2,7 +2,9 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phases 1 (foundation) and 2 (lead discovery) are done. Scoring, the dashboard, outreach drafts, compliance notes and the full deployment checklist come in later phases.
+**Status:** Phases 1 to 3 are done: foundation, lead discovery, and website scoring with priority. The call-list dashboard, outreach drafts, compliance notes and the full deployment checklist come in later phases.
+
+The look matches jtbuildsco.com (its "Nocturne" design system: dark, Inter, one blurple accent, outlined buttons).
 
 ## Stack
 
@@ -25,6 +27,7 @@ Private, single-user tool that finds, scores, ranks and tracks local-business pr
    - `20261007141435_initial_schema.sql`: enums, the `leads`, `outreach_log`, `search_runs` and `suppression` tables, indexes
    - `20261007141444_rls_and_signup_lock.sql`: RLS policies and the signup lock trigger
    - `20261007170640_places_usage.sql`: daily Places request counter and its reserve function
+   - `20261008000100_scoring.sql`: website status and scoring-queue columns, and a bulk priority update function
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
@@ -60,6 +63,58 @@ Google's Places terms let us store `place_id` permanently but treat other Places
 - Town coordinates are used only during a search and never stored.
 
 This is a summary to keep the app on the right side of the terms, not legal advice. Read the Google Maps Platform terms for your account.
+
+## Website scoring and priority (Phase 3)
+
+### What happens to each lead
+
+1. **No website** on Google, or a **social or directory page** only (Facebook, Instagram, Yelp, Angi, etc.): marked straight away, no checks needed.
+2. Everything else joins the **scoring queue**. The homepage is fetched (12 second timeout, up to 5 redirects, private network addresses refused):
+   - Domain doesn't resolve, connection refused, timeout, 404 or server error: **dead**.
+   - Parked, for sale, a default hosting page, or a "coming soon" placeholder: **parked**.
+   - 403, rate limited or a bot wall: **blocked**. Scored from PageSpeed alone.
+   - Otherwise it's a real site and gets **scored**.
+3. Dead, parked and social-only sites count the same as no website.
+
+### The built-in score (0 to 100)
+
+| Check | Points |
+| --- | --- |
+| PageSpeed Insights mobile performance | 20 |
+| Largest Contentful Paint (2.5s or less full marks, 4s or less partial) | 5 |
+| Cumulative Layout Shift (0.1 or less full, 0.25 or less partial) | 5 |
+| HTTPS | 10 |
+| Mobile viewport tag | 10 |
+| Phone number visible on the homepage | 10 |
+| Click-to-call (`tel:`) link | 10 |
+| Contact form, booking link, or link to a contact/quote page | 10 |
+| Title tag | 5 |
+| Meta description | 5 |
+| Exactly one H1 | 5 |
+| LocalBusiness structured data | 5 |
+
+Every lost point is listed in plain English in `score_breakdown`. If part of the check couldn't run (blocked homepage, PageSpeed failed after 3 tries), those points are left out and the score is scaled to what was measured, with a note saying so. Wix, Squarespace, GoDaddy and Weebly are flagged for information only; they don't cost points. Only the homepage HTML is checked, without running JavaScript.
+
+### The queue
+
+Leads are scored one at a time with a pause between, so a batch of 50 never hammers a site or Google. The runner lives in the app layout: it starts after a search adds new leads, or from "Score websites now" on the dashboard. It keeps going while you move between pages and shows progress in the header. A lead that fails temporarily (PageSpeed busy, timeout) is retried, up to 3 attempts. Two runners can't score the same lead. From Phase 6 a cron job drains the queue when the app is closed.
+
+PageSpeed uses `GOOGLE_PAGESPEED_API_KEY`, or falls back to `GOOGLE_PLACES_API_KEY`. Enable the PageSpeed Insights API on that key, since without a key Google's shared quota is nearly always exhausted. If the key is rejected, scoring stops with a message saying so.
+
+### Using your SEO tool instead
+
+Set `SEO_TOOL_URL` and `SEO_TOOL_API_KEY`. Real sites (after the dead/parked/social checks) are then sent as `POST {"url": "..."}` with `Authorization: Bearer <key>`. The response needs a 0-100 `score` (also accepted: `score_total`, `overall_score`, `total`, or a 0-1 fraction) and optionally `issues` (or `deductions` / `findings`): strings, or objects with `message`/`title` and `points`/`impact`. The mapping is in `lib/seo-tool.ts`, and `scoreSite()` in `lib/scoring.ts` is the single place to swap scorers.
+
+### Priority (0 to 100)
+
+`computePriority()` in `lib/priority.ts`, with the weights at the top of the file:
+
+- No real website: +60. A real site: up to +55, more the lower its score. Not scored yet: +20.
+- Under 15 reviews: +10. Rating under 4.5 or none: +5.
+- Has a phone: +25. No phone: the total is multiplied by 0.3.
+- Won, lost or do-not-contact: always 0.
+
+After changing the weights, press "Recalculate priorities" on the dashboard. The same file writes the "why this lead" line, e.g. "No website. 6 reviews. Landscaper in Mansfield, MA."
 
 ## How access is locked down
 

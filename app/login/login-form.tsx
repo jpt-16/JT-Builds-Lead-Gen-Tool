@@ -17,7 +17,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
 
   return (
     <form action={isSignIn ? signInAction : signUpAction} className="space-y-4">
-      <h2 className="text-lg font-semibold">{isSignIn ? "Sign in" : "Create the owner account"}</h2>
+      <h2 className="text-lg font-medium">{isSignIn ? "Sign in" : "Create the owner account"}</h2>
 
       {error && (
         <p role="alert" className="alert-error">
@@ -62,7 +62,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
           className="field-input"
         />
         {!isSignIn && (
-          <p id="password-hint" className="mt-1 text-sm text-slate-600">
+          <p id="password-hint" className="mt-1 text-sm text-muted">
             At least 12 characters.
           </p>
         )}
@@ -72,7 +72,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
         {pending ? "Working…" : isSignIn ? "Sign in" : "Create account"}
       </button>
 
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {isSignIn ? "First time here? " : "Already set up? "}
         <button type="button" className="btn-link" onClick={() => setMode(isSignIn ? "signup" : "signin")}>
           {isSignIn ? "Create the owner account" : "Sign in"}

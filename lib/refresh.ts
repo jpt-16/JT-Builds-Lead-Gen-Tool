@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { recomputeDerived } from "@/lib/derived";
+import { scoreReset } from "@/lib/lead-import";
 import { getPlaceDetails, toLeadFields } from "@/lib/places";
 import type { RefreshSummary, Usage } from "@/lib/find-leads-config";
 import { DailyLimitError, reservePlacesRequest } from "@/lib/places-usage";
@@ -26,7 +28,7 @@ export async function refreshStaleLeads(
 ): Promise<RefreshSummary> {
   const { data: stale, error } = await supabase
     .from("leads")
-    .select("id, place_id, business_name")
+    .select("id, place_id, business_name, website_url")
     .lt("last_refreshed_at", staleCutoff())
     .order("last_refreshed_at", { ascending: true })
     .limit(config.limit);
@@ -60,15 +62,18 @@ export async function refreshStaleLeads(
 
     // Keep the stored place_id; only the refreshable fields change.
     const { place_id, ...fields } = toLeadFields(place);
+    // A new website address needs a fresh score.
+    const reset = fields.website_url !== lead.website_url ? scoreReset(fields.website_url, new Date()) : {};
     const { error: updateError } = await supabase
       .from("leads")
-      .update({ ...fields, last_refreshed_at: now })
+      .update({ ...fields, ...reset, last_refreshed_at: now })
       .eq("id", lead.id);
     if (updateError) throw new Error(`Could not update lead: ${updateError.message}`);
     refreshed++;
     if (place.businessStatus === "CLOSED_PERMANENTLY") nowClosed.push(fields.business_name);
   }
 
+  if (stale?.length) await recomputeDerived(supabase, { ids: stale.map((l) => l.id) });
   const remainingStale = await countStaleLeads(supabase);
   return { refreshed, notFound, nowClosed, limitReached, remainingStale, usage };
 }
