@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // Pages are added here as each phase ships them.
-const LINKS = [{ href: "/dashboard", label: "Dashboard" }];
+const LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/find", label: "Find leads" },
+];
 
 export function AppNav() {
   const pathname = usePathname();

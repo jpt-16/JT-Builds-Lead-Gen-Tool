@@ -2,7 +2,7 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phase 1 (foundation and data model) is done. Lead discovery, scoring, the dashboard, outreach drafts, compliance notes and the full deployment checklist come in later phases.
+**Status:** Phases 1 (foundation) and 2 (lead discovery) are done. Scoring, the dashboard, outreach drafts, compliance notes and the full deployment checklist come in later phases.
 
 ## Stack
 
@@ -24,6 +24,7 @@ Private, single-user tool that finds, scores, ranks and tracks local-business pr
 2. **Review, then apply the migrations** in `supabase/migrations/`, in filename order. Paste each file into the SQL editor, or use the Supabase CLI (`supabase link` then `supabase db push`).
    - `20261007141435_initial_schema.sql`: enums, the `leads`, `outreach_log`, `search_runs` and `suppression` tables, indexes
    - `20261007141444_rls_and_signup_lock.sql`: RLS policies and the signup lock trigger
+   - `20261007150000_places_usage.sql`: daily Places request counter and its reserve function
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
@@ -33,6 +34,32 @@ Private, single-user tool that finds, scores, ranks and tracks local-business pr
    - In the dashboard: Authentication > Users > Add user, with "Auto confirm" ticked.
 6. Optional, after the account exists: turn off "Allow new users to sign up". The trigger already blocks other emails; this closes the endpoint entirely.
 7. API keys: use the new publishable (`sb_publishable_...`) and secret (`sb_secret_...`) keys. Supabase's legacy `anon` and `service_role` keys stop working at the end of 2026.
+
+## Finding leads (Phase 2)
+
+`/find` searches Google Places (New) for a trade in a town, one town or several in a row.
+
+- Each town costs up to 4 Places requests: 1 to locate the town, then up to 3 pages of 20 results (Google's maximum is 60 per query).
+- Results outside the chosen radius, permanently closed businesses and anything on the do-not-contact list are skipped.
+- Leads are matched on `place_id`. Re-running a search never creates duplicates and only refreshes the Google fields. `status`, `notes`, `trade`, contact dates and outreach history are never overwritten.
+- Every run is logged in `search_runs` and listed on the page.
+
+### Cost guardrail
+
+The page shows an estimate before running and today's usage. `MAX_PLACES_REQUESTS_PER_DAY` (default 30) is a hard cap enforced in the database: the app reserves one request before every call to Google, and once the cap is reached it stops with a clear error. Results already fetched are kept. The count resets at midnight Eastern.
+
+Pricing as of late 2026 (check Google's pricing page): requesting phone, website and rating puts Text Search and Place Details in the Enterprise tier, about $35 per 1,000 requests after a free 1,000 per month per SKU. 30 a day stays roughly inside the free tier. Set a billing budget alert in Google Cloud as well.
+
+### Google's terms and data freshness
+
+Google's Places terms let us store `place_id` permanently but treat other Places content (name, address, phone, website, rating, review count, Maps link) as something to refresh rather than keep indefinitely. So:
+
+- `place_id` is the permanent key for every lead.
+- Every other Google field is overwritten whenever the lead turns up in a search, and `last_refreshed_at` records when.
+- "Refresh stale leads" on `/find` re-fetches details for leads older than 30 days (one request each, counted against the daily cap). A Vercel cron job runs the same refresh automatically from Phase 6.
+- Town coordinates are used only during a search and never stored.
+
+This is a summary to keep the app on the right side of the terms, not legal advice. Read the Google Maps Platform terms for your account.
 
 ## How access is locked down
 
@@ -51,6 +78,7 @@ Four layers. RLS and the signup lock protect the data even if someone calls Supa
 | `outreach_log` | Every call, email, DM or visit, with an outcome. |
 | `search_runs` | One row per Find leads search. |
 | `suppression` | Do-not-contact list (phone, email, business name). |
+| `places_usage` | Places API requests per day, for the daily cap. |
 
 Every table also has `owner_id` (defaults to the signed-in user) for RLS. `leads.why_this_lead` holds the one-line summary from Phase 3. Deleting a lead that has outreach history, or deleting the auth user while data exists, is blocked by foreign keys so history cannot be wiped by accident.
 

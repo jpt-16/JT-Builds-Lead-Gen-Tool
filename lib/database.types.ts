@@ -122,6 +122,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["search_runs"]["Insert"]>;
         Relationships: [];
       };
+      places_usage: {
+        Row: {
+          owner_id: string;
+          day: string;
+          request_count: number;
+        };
+        Insert: {
+          owner_id?: string;
+          day: string;
+          request_count?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["places_usage"]["Insert"]>;
+        Relationships: [];
+      };
       suppression: {
         Row: {
           id: string;
@@ -146,7 +160,12 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      reserve_places_requests: {
+        Args: { requested: number; daily_limit: number };
+        Returns: { allowed: boolean; used: number }[];
+      };
+    };
     Enums: {
       lead_status:
         | "new"
