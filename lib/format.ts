@@ -15,3 +15,10 @@ export function formatDateTime(iso: string): string {
 export function metersToMiles(meters: number): number {
   return Math.round(meters / 1609.344);
 }
+
+const day = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric" });
+
+/** "Fri, Oct 10" in Eastern time. */
+export function formatDay(iso: string): string {
+  return day.format(new Date(iso));
+}

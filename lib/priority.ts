@@ -1,3 +1,4 @@
+import { CLOSED_STATUSES } from "@/lib/leads-config";
 import type { Deduction } from "@/lib/score-calc";
 import { NO_REAL_SITE, socialPlatform, type SiteStatus } from "@/lib/website";
 
@@ -28,8 +29,6 @@ export const WEIGHTS = {
 export const LOW_REVIEW_COUNT = 15;
 export const LOW_RATING = 4.5;
 
-/** Statuses that are finished: never put them back on the call list. */
-const CLOSED_STATUSES = ["won", "lost", "do_not_contact"];
 
 export type PriorityInput = {
   status: string;
@@ -41,7 +40,7 @@ export type PriorityInput = {
 };
 
 export function computePriority(lead: PriorityInput): number {
-  if (CLOSED_STATUSES.includes(lead.status)) return 0;
+  if ((CLOSED_STATUSES as string[]).includes(lead.status)) return 0;
 
   let priority = 0;
 

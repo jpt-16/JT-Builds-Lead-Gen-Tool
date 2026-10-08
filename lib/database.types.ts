@@ -179,6 +179,10 @@ export type Database = {
         Args: { payload: Json };
         Returns: number;
       };
+      lead_funnel: {
+        Args: { week_start: string };
+        Returns: { found_this_week: number; total: number; contacted: number; replied: number; booked: number; won: number }[];
+      };
     };
     Enums: {
       lead_status:

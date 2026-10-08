@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 // Pages are added here as each phase ships them.
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/leads", label: "Leads" },
   { href: "/find", label: "Find leads" },
 ];
 

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { easternDate } from "@/lib/dates";
 import type { Usage } from "@/lib/find-leads-config";
 
 type Client = SupabaseClient<Database>;
@@ -25,10 +26,6 @@ export function getPlacesConfig() {
   };
 }
 
-/** Today's date in Eastern time, matching the day boundary in the database. */
-export function easternDate(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(now);
-}
 
 export async function getUsageToday(supabase: Client, limit: number): Promise<Usage> {
   const { data, error } = await supabase

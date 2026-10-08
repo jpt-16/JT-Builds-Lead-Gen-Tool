@@ -18,7 +18,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-10 bg-bg">
+      {/* Sticky from tablet width up; on a phone it scrolls away to leave room for the call list. */}
+      <header className="z-10 bg-bg sm:sticky sm:top-0">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-1 px-4 py-2">
           <div className="flex flex-wrap items-center gap-x-8 gap-y-1">
             <Link href="/dashboard" className="inline-flex min-h-11 items-center transition-opacity hover:opacity-70">

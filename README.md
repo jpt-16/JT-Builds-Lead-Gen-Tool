@@ -2,7 +2,7 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phases 1 to 3 are done: foundation, lead discovery, and website scoring with priority. The call-list dashboard, outreach drafts, compliance notes and the full deployment checklist come in later phases.
+**Status:** Phases 1 to 4 are done: foundation, lead discovery, website scoring with priority, and the daily call list, leads table and lead pages. Outreach drafts, compliance notes, cron jobs and the full deployment checklist come in later phases.
 
 The look matches jtbuildsco.com (its "Nocturne" design system: dark, Inter, one blurple accent, outlined buttons).
 
@@ -28,6 +28,7 @@ The look matches jtbuildsco.com (its "Nocturne" design system: dark, Inter, one 
    - `20261007141444_rls_and_signup_lock.sql`: RLS policies and the signup lock trigger
    - `20261007170640_places_usage.sql`: daily Places request counter and its reserve function
    - `20261007234951_scoring.sql`: website status and scoring-queue columns, and a bulk priority update function
+   - `20261008010000_lead_funnel.sql`: one function that returns the dashboard funnel counts
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
@@ -116,6 +117,44 @@ Set `SEO_TOOL_URL` and `SEO_TOOL_API_KEY`. Real sites (after the dead/parked/soc
 
 After changing the weights, press "Recalculate priorities" on the dashboard. The same file writes the "why this lead" line, e.g. "No website. 6 reviews. Landscaper in Mansfield, MA."
 
+## Daily workflow (Phase 4)
+
+### Dashboard: today's call list
+
+- **Stats** at the top: leads found this week, then contacted, replies, calls booked and won, each with the conversion from the stage before, plus a simple funnel. A lead counts at every stage it ever reached, so a lead that later went cold still counts as contacted.
+- **Follow-ups due** today or overdue come first, then **fresh leads**: everything you queued, then the highest-priority new leads, up to 30 (`CALL_LIST_SIZE` in `lib/leads-config.ts`). Leads snoozed to a later day stay off the list.
+- Each card has a big call button, the website or "No website", the score, and the "why this lead" line. One tap logs an outcome. "More actions" has not interested, wrong number, snooze, set status and do not contact.
+- **Keyboard:** `j`/`k` or the arrow keys move, `1` to `5` log No answer, Voicemail, Spoke, Interested or Booked on the selected lead, `o` opens it. Shortcuts are ignored while typing in a field. Each action takes the lead off today's list and moves to the next one.
+- On a phone the header scrolls away, cards are full width and every button is at least 44px tall.
+
+### What logging an outcome does
+
+Set in `OUTCOME_RULES` in `lib/leads-config.ts`:
+
+| Outcome | Status | Next follow-up |
+| --- | --- | --- |
+| No answer | Contacted | 2 days |
+| Voicemail | Contacted | 3 days |
+| Spoke | Contacted | 1 week |
+| Interested | Replied | 2 days |
+| Booked | Call booked | cleared |
+| Not interested | Lost | cleared |
+| Wrong number | Lost | cleared |
+
+Status only moves forward (a later no-answer doesn't undo "replied"), won and do-not-contact never change automatically, and a lost lead that turns interested is revived. Follow-ups land at 9am Eastern. Priority is recalculated after every change, so won, lost and do-not-contact drop to 0.
+
+### Do not contact
+
+Marking a lead do not contact (call list, lead page, or bulk) also adds its phone and name to the `suppression` table. Find leads never re-imports a suppressed business, and "Add to queue" never queues one. Changing the status back later does not remove the suppression row.
+
+### Leads table (`/leads`)
+
+Search (name, phone, town, notes), filters (trade, town, state, status, website, site score range, review count range), sorting by any underlined column, and 50 per page. Filters live in the URL, so a filtered view can be bookmarked. Bulk actions: add to queue (new leads only), set any status, export the selection, or export everything matching the filters as CSV. The CSV defuses spreadsheet formulas in names and notes.
+
+### Lead page (`/leads/[id]`)
+
+Contact details, a form to log any channel and outcome with a note, the outreach history timeline, the editable fields (status, next follow-up, trade, notes), the website score breakdown, and the outreach drafts panel, which arrives in Phase 5. Google-sourced fields aren't editable because the 30-day refresh would overwrite them.
+
 ## How access is locked down
 
 Four layers. RLS and the signup lock protect the data even if someone calls Supabase directly with the public key; the proxy and server check keep strangers out of the app itself.
@@ -151,7 +190,7 @@ Every table also has `owner_id` (defaults to the signed-in user) for RLS. `leads
 
 ```
 app/
-  (app)/          signed-in pages (dashboard for now) and their shared layout
+  (app)/          signed-in pages (dashboard, leads, find) and their shared layout
   api/            route handlers (from Phase 2)
   auth/callback/  email confirmation landing route
   login/          sign-in and owner signup
