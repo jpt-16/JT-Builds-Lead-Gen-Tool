@@ -2,7 +2,7 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phases 1 to 4 are done: foundation, lead discovery, website scoring with priority, and the daily call list, leads table and lead pages. Outreach drafts, compliance notes, cron jobs and the full deployment checklist come in later phases.
+**Status:** Phases 1 to 5 are done: foundation, lead discovery, website scoring with priority, the daily call list, leads table and lead pages, and outreach drafts. Compliance notes, cron jobs and the full deployment checklist come in later phases.
 
 The layout borrows from analytics tools like Semrush: a dark sidebar with breadcrumbs, a light work area, metric cards with weekly trends, a website health gauge with issues grouped by severity, and pill filters with a column picker. Colours and the logo come from jtbuildsco.com (Inter, one blurple accent). Every text and control colour passes WCAG AA; the values are in the header comment of `app/globals.css`.
 
@@ -158,6 +158,35 @@ Bulk actions: add to queue (new leads only), set any status, or export the selec
 ### Lead page (`/leads/[id]`)
 
 Contact details and priority, a **Website health** panel (score gauge, error/warning/notice counts, and each problem with a plain-English fix), a form to log any channel and outcome with a note, the outreach history timeline, the editable fields (status, next follow-up, trade, notes), and the outreach drafts panel, which arrives in Phase 5. Severity rules for the health panel are in `lib/site-issues.ts`. Google-sourced fields aren't editable because the 30-day refresh would overwrite them.
+
+## Outreach drafts (Phase 5)
+
+Each lead page has a drafts panel with four drafts: **call opener**, **voicemail**, **cold email** and **follow-up email**. They're built from templates in `lib/drafts.ts`, using only what the app knows about the lead: its Google listing (name, trade, town, review count, rating) and the website check. A "Based on" line above the draft lists those facts so you can check them before you use it.
+
+What each lead gets:
+
+| Website | Pitch |
+| --- | --- |
+| None, social page only, dead or parked | A website, naming exactly what's wrong (e.g. "The listing doesn't link to a website") |
+| Weak or fair (under 80) | A website, naming its top three problems from the check (speed, no tap-to-call, no quote form and so on) |
+| Good (80+) | Follow-up automation instead of a site: instant replies to quote requests, missed-call text-back and review requests. No price is quoted. |
+| Not checked yet, or the site blocked the check | A general note, with a warning to score it or look at it first |
+
+The voice is spare, first person and blunt: no exclamation marks, no urgency, no invented facts. Tests check every variant for exclamation marks and for the compliance footer.
+
+- **Nothing is ever sent.** Each draft is editable. Copy it, or for emails, use **Open in mail app** (a `mailto:` link with the subject and body filled in) and send it yourself.
+- **Email compliance:** every email ends with your name, JT Builds Co, your callback number, the line "Reply stop and I won't contact you again." and `BUSINESS_MAILING_ADDRESS`. If that address isn't set, email drafts are blocked with a message saying so. If you edit out the opt-out line, the address or the business name, the panel won't copy the email or open it until you put them back.
+- **Sender details:** set `OUTREACH_SENDER_NAME` and `OUTREACH_CALLBACK_PHONE`. Until you do, the drafts say "[your name]" and "[your callback number]" and show a warning.
+- **Do not contact:** leads on the do-not-contact list get no drafts.
+
+### Rewrite with Gemini (optional)
+
+If `GEMINI_API_KEY` is set, each draft gets a **Rewrite with Gemini** button. The rewrite is labeled as a Gemini rewrite, and **Back to template** undoes it.
+
+- **Model:** `GEMINI_MODEL` picks the model. It defaults to `gemini-3.8-flash`.
+- **What it sends:** only the business name, trade, town, state, review count, rating, the website finding and the template text. It never sends the lead's phone number, address, notes or outreach history. The key goes in a request header, never the URL.
+- **Voice and accuracy:** the instructions repeat the voice rules and tell it not to invent facts, quote prices the template doesn't, or offer deals. The app also strips any exclamation marks. Emails get the signature and compliance footer added after the rewrite, so the model can't drop them.
+- **Get a key:** create one in Google AI Studio. On the free tier, Google may use what you send to improve its products, so turn on billing for the key's project if that matters to you.
 
 ## How access is locked down
 

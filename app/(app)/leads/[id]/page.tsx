@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PhoneIcon } from "@/components/Icons";
+import { DraftsPanel } from "@/components/DraftsPanel";
 import { LeadEditor } from "@/components/LeadEditor";
 import { LogOutreachForm } from "@/components/LogOutreachForm";
 import { PageHeader } from "@/components/PageHeader";
 import { SiteHealth } from "@/components/SiteHealth";
 import { StatusBadge } from "@/components/StatusBadge";
+import { buildDrafts, type DraftLead } from "@/lib/drafts";
 import { formatDateTime, formatDay } from "@/lib/format";
+import { getGeminiConfig } from "@/lib/gemini";
 import { CHANNEL_LABELS, OUTCOME_LABELS } from "@/lib/leads-config";
+import { getOutreachConfig } from "@/lib/outreach-config";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Lead | JT Builds Co Lead Engine" };
@@ -25,6 +29,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   if (!lead) notFound();
   const history = historyResult.data ?? [];
   const place = [lead.city, lead.state].filter(Boolean).join(", ");
+  const outreach = getOutreachConfig();
+  const drafts = lead.status === "do_not_contact" ? null : buildDrafts(lead as DraftLead, outreach);
 
   return (
     <>
@@ -146,12 +152,16 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 next_follow_up_at: lead.next_follow_up_at,
               }}
             />
-            <section className="card" aria-labelledby="drafts-heading">
-              <h2 id="drafts-heading" className="text-base font-semibold text-ink">
-                Outreach drafts
-              </h2>
-              <p className="mt-1 text-sm text-muted">Call openers, voicemail scripts and emails for this lead arrive in Phase 5.</p>
-            </section>
+            {drafts ? (
+              <DraftsPanel leadId={lead.id} drafts={drafts} mailingAddress={outreach.mailingAddress} geminiModel={getGeminiConfig()?.model ?? null} />
+            ) : (
+              <section className="card" aria-labelledby="drafts-heading">
+                <h2 id="drafts-heading" className="text-base font-semibold text-ink">
+                  Outreach drafts
+                </h2>
+                <p className="mt-1 text-sm text-muted">This lead is on the do-not-contact list, so there are no drafts.</p>
+              </section>
+            )}
           </div>
         </div>
       </div>

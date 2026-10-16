@@ -119,6 +119,9 @@
   .alert-success {
     @apply rounded-md border border-success-line bg-success-soft p-3 text-sm text-success;
   }
+  .alert-warning {
+    @apply rounded-md border border-warning-line bg-warning-soft p-3 text-sm text-warning;
+  }
   .alert-info {
     @apply rounded-md border border-notice-line bg-notice-soft p-3 text-sm text-notice;
   }
