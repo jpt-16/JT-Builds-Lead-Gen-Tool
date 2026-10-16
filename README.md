@@ -2,7 +2,7 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phases 1 to 6 are done: foundation, lead discovery, website scoring with priority, the daily call list, leads table and lead pages, outreach drafts, and safety (compliance notes, input validation, tests, the scheduled job, accessibility). The deployment checklist and demo mode come in Phase 7.
+**Status:** All seven phases are done: foundation, lead discovery, website scoring with priority, the daily call list, leads table and lead pages, outreach drafts, safety (compliance notes, input validation, tests, the scheduled job, accessibility), and deployment (a checklist and a demo mode). To go live, follow **[DEPLOY.md](DEPLOY.md)**. To look around without spending any Google credits, see **Demo mode** below.
 
 The layout borrows from analytics tools like Semrush: a dark sidebar with breadcrumbs, a light work area, metric cards with weekly trends, a website health gauge with issues grouped by severity, and pill filters with a column picker. Colours and the logo come from jtbuildsco.com (Inter, one blurple accent). Every text and control colour passes WCAG AA; the values are in the header comment of `app/globals.css`.
 
@@ -16,7 +16,7 @@ The layout borrows from analytics tools like Semrush: a dark sidebar with breadc
 
 1. Node 22 or newer.
 2. `npm install`
-3. `cp .env.example .env.local` and fill in the Supabase values and `ALLOWED_EMAIL`. Each variable has a one-line comment in `.env.example`. The Google, outreach and cron variables are not needed until later phases.
+3. `cp .env.example .env.local` and fill in the Supabase values and `ALLOWED_EMAIL`. Each variable has a one-line comment in `.env.example`. You need the Google key only to find and score real leads, and the outreach variables only for drafts. The demo mode needs neither.
 4. Set up Supabase (next section).
 5. `npm run dev` and open http://localhost:3000. You land on `/login`.
 
@@ -29,10 +29,11 @@ The layout borrows from analytics tools like Semrush: a dark sidebar with breadc
    - `20261007170640_places_usage.sql`: daily Places request counter and its reserve function
    - `20261007234951_scoring.sql`: website status and scoring-queue columns, and a bulk priority update function
    - `20261008003320_lead_funnel.sql`: one function that returns the dashboard funnel counts
+   - `20261016222802_cron_places_reserve.sql`: a Places-quota function only the server's service key can run, for the daily job
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
-   - URL configuration: set Site URL to your app URL, and add `http://localhost:3000/auth/callback` plus `https://<your-domain>/auth/callback` to Redirect URLs.
+   - URL configuration: set Site URL to your app URL, and add `http://localhost:3000/**` plus `https://<your-domain>/**` to Redirect URLs. The wildcard matters: sign-up and password-reset links carry extra details in the address, and an exact `/auth/callback` entry would not match them.
 5. Create the owner account, either way works:
    - In the app: on `/login`, choose "Create the owner account", then click the confirmation link in your email.
    - In the dashboard: Authentication > Users > Add user, with "Auto confirm" ticked.
@@ -188,6 +189,22 @@ If `GEMINI_API_KEY` is set, each draft gets a **Rewrite with Gemini** button. Th
 - **Voice and accuracy:** the instructions repeat the voice rules and tell it not to invent facts, quote prices the template doesn't, or offer deals. The app also strips any exclamation marks. Emails get the signature and compliance footer added after the rewrite, so the model can't drop them.
 - **Get a key:** create one in Google AI Studio. On the free tier, Google may use what you send to improve its products, so turn on billing for the key's project if that matters to you.
 
+## Demo mode (Phase 7)
+
+Ten made-up leads let you try the whole app with no Google credits and no real businesses.
+
+```
+npm run seed:demo          # add (or refresh) the demo leads
+npm run seed:demo:remove   # delete them again
+```
+
+- **What you get:** leads named "Demo ...", with 555-01xx phone numbers and `.example` websites, so nothing real can be called or emailed. They cover every case: no website, a social page only, a dead site, a parked domain, and weak, fair and good sites. Statuses run from new to won, with outreach spread over eight weeks. The dashboard cards and trends, the pipeline, the website health bar, a follow-up that's due today, and drafts of every kind all have something to show. Sites that score 80 or higher get the automation pitch.
+- **Scores and priorities are real calculations.** The demo site scores come from the same calculator the app uses, and the priorities and "why this lead" lines from the same priority function.
+- **It writes to the project in `.env.local`,** using `SUPABASE_SECRET_KEY` and the account that matches `ALLOWED_EMAIL`. Sign up first. If that file points at your live project, the demo leads land beside your real ones, which is why every one is clearly labeled "Demo".
+- **It only ever touches rows whose `place_id` starts with `demo-`.** Running `seed:demo` again replaces the demo leads rather than duplicating them. `seed:demo:remove` deletes those leads and their outreach history, and nothing else. Your real leads, notes and history are never read or changed.
+- **They never cost a Google request.** Demo leads are marked as already scored, and the 30-day Google refresh skips them.
+- Remove the demo leads before you begin real outreach.
+
 ## Compliance reminders (Phase 6)
 
 **This is a reminder for how the app is built to behave, not legal advice.** Rules change and differ by state. If you're unsure, ask a lawyer who handles marketing law.
@@ -237,7 +254,7 @@ The batches are small on purpose. Use **Score websites now** on the dashboard fo
 
 - **It is protected by `CRON_SECRET`.** Add a long random value as an env var in Vercel. Vercel then sends it as `Authorization: Bearer <CRON_SECRET>` on every cron call. Without the variable the route answers 503, and with a wrong or missing header it answers 401. Generate one with `openssl rand -hex 32`.
 - **It needs `SUPABASE_SECRET_KEY`.** The job has no signed-in user, so it uses the server-only service key to do its work. That key bypasses row-level security, so it is only ever used in this route, never sent to a browser and never logged.
-- **It needs migration `20261016210000_cron_places_reserve.sql`,** which adds a Places-quota function that only the service role can run. Apply it before the first run.
+- **It needs migration `20261016222802_cron_places_reserve.sql`,** which adds a Places-quota function that only the service role can run. Apply it before the first run.
 - **Vercel's free (Hobby) plan allows cron jobs that run once a day.** The schedule is in `vercel.json`. On a paid plan you can run it more often.
 - **To test it by hand,** run `curl -H "Authorization: Bearer YOUR_SECRET" https://YOUR-SITE/api/cron/maintain`. It returns a short JSON summary.
 
@@ -288,13 +305,16 @@ Every table also has `owner_id` (defaults to the signed-in user) for RLS. `leads
 | `npm test` | Unit tests (Vitest) |
 | `npm run typecheck` | Generates route types, then runs `tsc` |
 | `npm run lint` | ESLint |
+| `npm run seed:demo` | Adds ten fake demo leads to the project in `.env.local` (see Demo mode) |
+| `npm run seed:demo:remove` | Deletes only the demo leads and their history |
 
 ## Project structure
 
 ```
 app/
   (app)/          signed-in pages (dashboard, leads, find) and their shared layout
-  api/            route handlers (from Phase 2)
+  api/            route handlers, including the daily job at api/cron/maintain
+  forgot-password/  reset-password/   password reset pages
   auth/callback/  email confirmation landing route
   login/          sign-in and owner signup
 components/       shared UI
@@ -303,6 +323,8 @@ lib/
   auth.ts         pure helpers: allowed email check, safe redirects
   session.ts      requireOwner() for server code
   database.types.ts
+  demo-data.ts    the ten demo leads
+scripts/          seed-demo.ts (demo mode)
 supabase/
   migrations/     SQL migrations, applied in order
   setup/          one-off SQL you run by hand

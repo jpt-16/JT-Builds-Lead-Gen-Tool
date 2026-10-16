@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { DEMO_PREFIX } from "@/lib/demo-data";
 import { recomputeDerived } from "@/lib/derived";
 import { scoreReset } from "@/lib/lead-import";
 import { getPlaceDetails, toLeadFields } from "@/lib/places";
@@ -24,12 +25,18 @@ export function staleCutoff(now = new Date()): string {
  */
 export async function refreshStaleLeads(
   supabase: Client,
-  config: { apiKey: string; dailyLimit: number; limit: number; /** Cron only: reserve quota for each lead's owner instead of the signed-in user. */ asOwner?: boolean },
+  config: {
+    apiKey: string;
+    dailyLimit: number;
+    limit: number;
+    /** Cron only: reserve quota for each lead's owner instead of the signed-in user. */ asOwner?: boolean;
+  },
 ): Promise<RefreshSummary> {
   const { data: stale, error } = await supabase
     .from("leads")
     .select("id, owner_id, place_id, business_name, website_url")
     .lt("last_refreshed_at", staleCutoff())
+    .not("place_id", "like", `${DEMO_PREFIX}%`)
     .order("last_refreshed_at", { ascending: true })
     .limit(config.limit);
   if (error) throw new Error(`Could not load stale leads: ${error.message}`);
@@ -82,7 +89,8 @@ export async function countStaleLeads(supabase: Client): Promise<number> {
   const { count, error } = await supabase
     .from("leads")
     .select("id", { count: "exact", head: true })
-    .lt("last_refreshed_at", staleCutoff());
+    .lt("last_refreshed_at", staleCutoff())
+    .not("place_id", "like", `${DEMO_PREFIX}%`);
   if (error) throw new Error(`Could not count stale leads: ${error.message}`);
   return count ?? 0;
 }
