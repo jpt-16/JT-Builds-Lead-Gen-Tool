@@ -5,7 +5,8 @@ import type { Database } from "@/lib/database.types";
 import { getSupabaseConfig } from "./config";
 
 // Paths reachable without a session. Everything else requires the owner.
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+// /api/cron has no user session: the route itself checks CRON_SECRET.
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/callback", "/api/cron"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

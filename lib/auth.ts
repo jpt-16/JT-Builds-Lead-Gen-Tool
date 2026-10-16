@@ -24,7 +24,7 @@ export function safeRedirectPath(next: unknown): string {
   if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
     return DEFAULT_REDIRECT;
   }
-  if (next === "/login" || next.startsWith("/login?") || next.startsWith("/auth/")) {
+  if (next === "/login" || next.startsWith("/login?") || next.startsWith("/forgot-password") || next.startsWith("/auth/")) {
     return DEFAULT_REDIRECT;
   }
   return next;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthFormState } from "./actions";
 
@@ -64,6 +65,13 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
         {!isSignIn && (
           <p id="password-hint" className="mt-1 text-sm text-muted">
             At least 12 characters.
+          </p>
+        )}
+        {isSignIn && (
+          <p className="mt-2 text-sm">
+            <Link href="/forgot-password" className="btn-link">
+              Forgot your password?
+            </Link>
           </p>
         )}
       </div>

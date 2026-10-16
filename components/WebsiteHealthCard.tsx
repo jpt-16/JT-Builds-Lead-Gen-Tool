@@ -52,18 +52,16 @@ export function WebsiteHealthCard({ dist, pending, failed }: { dist: HealthDistr
 
       <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
         {SEGMENTS.map((s) =>
-          dist[s.key] > 0 ? (
-            <span key={s.key} style={{ flexGrow: dist[s.key], background: s.color }} title={`${s.label}: ${dist[s.key]}`} />
-          ) : null,
+          dist[s.key] > 0 ? <span key={s.key} style={{ flexGrow: dist[s.key], background: s.color }} title={`${s.label}: ${dist[s.key]}`} /> : null,
         )}
       </div>
 
-      <ul className="mt-4 space-y-1.5 text-sm">
+      <ul className="mt-3 text-sm">
         {SEGMENTS.map((s) => (
           <li key={s.key} className="flex items-center gap-2">
             <span className="size-2.5 shrink-0 rounded-sm" style={{ background: s.color }} aria-hidden="true" />
             {s.href ? (
-              <Link href={s.href} className="flex-1 text-ink-2 hover:text-accent hover:underline">
+              <Link href={s.href} className="flex min-h-11 flex-1 items-center text-ink-2 hover:text-accent hover:underline">
                 {s.label}
               </Link>
             ) : (

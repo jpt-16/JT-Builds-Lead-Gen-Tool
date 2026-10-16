@@ -13,7 +13,7 @@ export function QuickSearch() {
         name="q"
         type="search"
         placeholder="Search leads by name, phone or town"
-        className="min-h-10 w-full rounded-md border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] focus:outline-none"
+        className="min-h-11 w-full rounded-md border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] focus:outline-2 focus:outline-offset-0 focus:outline-accent"
       />
     </form>
   );

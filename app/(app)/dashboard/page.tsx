@@ -14,7 +14,8 @@ export const metadata: Metadata = { title: "Dashboard | JT Builds Co Lead Engine
 
 const weekLabel = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
+  const passwordChanged = (await searchParams).password === "changed";
   const supabase = await createClient();
 
   let data;
@@ -60,6 +61,11 @@ export default async function DashboardPage() {
       />
 
       <div className="space-y-6">
+        {passwordChanged && (
+          <p role="status" className="alert-success">
+            Password changed.
+          </p>
+        )}
         <section aria-label="This week" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Leads found" metric={activity.leadsFound} weekLabels={weekLabels} />
           <MetricCard label="Outreach logged" metric={activity.outreach} weekLabels={weekLabels} />

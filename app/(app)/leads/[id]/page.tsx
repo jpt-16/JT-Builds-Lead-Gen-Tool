@@ -78,8 +78,13 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             <dt className="text-muted">Website</dt>
             <dd className="min-w-0 truncate">
               {lead.website_url ? (
-                <a href={lead.website_url} target="_blank" rel="noopener noreferrer" className="btn-link">
-                  {lead.website_url.replace(/^https?:\/\/(www\.)?/, "")}
+                <a
+                  href={lead.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-link inline-flex min-h-11 max-w-full items-center"
+                >
+                  <span className="truncate">{lead.website_url.replace(/^https?:\/\/(www\.)?/, "")}</span>
                 </a>
               ) : (
                 <span className="text-ink">None listed</span>

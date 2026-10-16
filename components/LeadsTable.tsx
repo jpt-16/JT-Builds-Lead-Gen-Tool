@@ -154,7 +154,7 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
 
   const header = (key: SortKey, label: string, className = "") => (
     <th scope="col" className={className} aria-sort={props.sort === key ? (props.dir === "asc" ? "ascending" : "descending") : undefined}>
-      <Link href={props.sortLinks[key]} className="inline-flex min-h-11 items-center hover:text-accent">
+      <Link href={props.sortLinks[key]} className="inline-flex min-h-11 min-w-11 items-center hover:text-accent">
         {label}
         {props.sort === key && (
           <span aria-hidden="true" className="ml-1">
@@ -225,7 +225,7 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
           <thead>
             <tr>
               <th scope="col" className="w-10 pl-4">
-                <label className="inline-flex min-h-11 items-center">
+                <label className="inline-flex min-h-11 min-w-11 items-center justify-center">
                   <span className="sr-only">Select all on this page</span>
                   <input
                     type="checkbox"
@@ -250,7 +250,7 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
             {props.rows.map((row) => (
               <tr key={row.id} className={selected.has(row.id) ? "bg-accent-soft" : undefined}>
                 <td className="pl-4">
-                  <label className="inline-flex min-h-11 items-center">
+                  <label className="inline-flex min-h-11 min-w-11 items-center justify-center">
                     <span className="sr-only">Select {row.business_name}</span>
                     <input
                       type="checkbox"
@@ -262,7 +262,10 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
                 </td>
                 <td className="text-base font-semibold text-accent tabular-nums">{row.priority_score}</td>
                 <td>
-                  <Link href={`/leads/${row.id}`} className="font-medium text-ink hover:text-accent hover:underline">
+                  <Link
+                    href={`/leads/${row.id}`}
+                    className="inline-flex min-h-11 items-center font-medium text-ink hover:text-accent hover:underline"
+                  >
                     {row.business_name}
                   </Link>
                   <span className="block text-xs text-muted">
@@ -272,7 +275,7 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
                 {show("phone") && (
                   <td className="whitespace-nowrap">
                     {row.phone ? (
-                      <a href={`tel:${row.phone}`} className="btn-link">
+                      <a href={`tel:${row.phone}`} className="btn-link inline-flex min-h-11 min-w-11 items-center">
                         {row.phone}
                       </a>
                     ) : (
@@ -285,7 +288,7 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
                     {row.site_status && SITE_TEXT[row.site_status] ? (
                       <span className="text-ink-2">{SITE_TEXT[row.site_status]}</span>
                     ) : row.website_url ? (
-                      <a href={row.website_url} target="_blank" rel="noopener noreferrer" className="btn-link">
+                      <a href={row.website_url} target="_blank" rel="noopener noreferrer" className="btn-link inline-flex min-h-11 min-w-11 items-center">
                         Visit
                       </a>
                     ) : (

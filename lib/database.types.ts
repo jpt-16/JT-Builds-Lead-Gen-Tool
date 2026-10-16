@@ -175,6 +175,10 @@ export type Database = {
         Args: { requested: number; daily_limit: number };
         Returns: { allowed: boolean; used: number }[];
       };
+      reserve_places_requests_for: {
+        Args: { owner: string; requested: number; daily_limit: number };
+        Returns: { allowed: boolean; used: number }[];
+      };
       set_lead_priorities: {
         Args: { payload: Json };
         Returns: number;

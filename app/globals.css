@@ -58,6 +58,13 @@
     -webkit-text-size-adjust: 100%;
     color-scheme: light;
   }
+  /* The top bar sticks on desktop. Scrolling to a focused field or an anchor
+     leaves room for it so the target is never hidden underneath. */
+  @media (min-width: 64rem) {
+    html {
+      scroll-padding-top: 5rem;
+    }
+  }
 
   body {
     @apply bg-page font-sans text-ink antialiased;
@@ -98,7 +105,7 @@
     @apply block text-[13px] font-semibold text-ink-2;
   }
   .field-input {
-    @apply mt-1.5 block min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-[15px] text-ink transition-shadow focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] focus:outline-none;
+    @apply mt-1.5 block min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-[15px] text-ink transition-shadow focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] focus:outline-2 focus:outline-offset-0 focus:outline-accent;
   }
   textarea.field-input {
     @apply py-2;

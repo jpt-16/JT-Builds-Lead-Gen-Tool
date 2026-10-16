@@ -41,9 +41,13 @@ export async function getUsageToday(supabase: Client, limit: number): Promise<Us
  * Reserves one Places request against today's limit. Call this right before
  * every request to Google. Returns the usage after reserving, or throws
  * DailyLimitError if the limit is reached.
+ * Pass `ownerId` only from the cron job, which uses the service-role client
+ * and has no signed-in user; everywhere else the signed-in user is the owner.
  */
-export async function reservePlacesRequest(supabase: Client, limit: number): Promise<Usage> {
-  const { data, error } = await supabase.rpc("reserve_places_requests", { requested: 1, daily_limit: limit });
+export async function reservePlacesRequest(supabase: Client, limit: number, ownerId?: string): Promise<Usage> {
+  const { data, error } = ownerId
+    ? await supabase.rpc("reserve_places_requests_for", { owner: ownerId, requested: 1, daily_limit: limit })
+    : await supabase.rpc("reserve_places_requests", { requested: 1, daily_limit: limit });
   if (error) throw new Error(`Could not reserve a Places request: ${error.message}`);
   const row = data?.[0];
   if (!row?.allowed) throw new DailyLimitError({ used: row?.used ?? limit, limit });

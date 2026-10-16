@@ -18,13 +18,13 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <nav aria-label="Breadcrumb">
+        <nav aria-label="Breadcrumb" className="-mt-2.5 -mb-2">
           <ol className="flex flex-wrap items-center gap-1 text-[13px] text-muted">
             {crumbs.map((crumb, i) => (
               <li key={crumb.label} className="flex items-center gap-1">
                 {i > 0 && <ChevronRightIcon className="size-3.5" />}
                 {crumb.href ? (
-                  <Link href={crumb.href} className="hover:text-accent hover:underline">
+                  <Link href={crumb.href} className="inline-flex min-h-11 min-w-11 items-center hover:text-accent hover:underline">
                     {crumb.label}
                   </Link>
                 ) : (

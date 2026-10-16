@@ -26,12 +26,17 @@ describe("safeRedirectPath", () => {
     expect(safeRedirectPath("/leads?status=new")).toBe("/leads?status=new");
   });
 
+  it("allows the set-new-password page, which a reset link returns to", () => {
+    expect(safeRedirectPath("/reset-password")).toBe("/reset-password");
+  });
+
   it.each([
     ["protocol-relative URL", "//evil.com"],
     ["backslash trick", "/\\evil.com"],
     ["absolute URL", "https://evil.com"],
     ["relative path", "leads"],
     ["login loop", "/login"],
+    ["forgot-password loop", "/forgot-password"],
     ["auth route", "/auth/callback"],
     ["non-string", 42],
     ["missing", null],

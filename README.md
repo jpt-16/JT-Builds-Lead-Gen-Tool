@@ -2,7 +2,7 @@
 
 Private, single-user tool that finds, scores, ranks and tracks local-business prospects for JT Builds Co. One owner account, no public pages.
 
-**Status:** Phases 1 to 5 are done: foundation, lead discovery, website scoring with priority, the daily call list, leads table and lead pages, and outreach drafts. Compliance notes, cron jobs and the full deployment checklist come in later phases.
+**Status:** Phases 1 to 6 are done: foundation, lead discovery, website scoring with priority, the daily call list, leads table and lead pages, outreach drafts, and safety (compliance notes, input validation, tests, the scheduled job, accessibility). The deployment checklist and demo mode come in Phase 7.
 
 The layout borrows from analytics tools like Semrush: a dark sidebar with breadcrumbs, a light work area, metric cards with weekly trends, a website health gauge with issues grouped by severity, and pill filters with a column picker. Colours and the logo come from jtbuildsco.com (Inter, one blurple accent). Every text and control colour passes WCAG AA; the values are in the header comment of `app/globals.css`.
 
@@ -187,6 +187,76 @@ If `GEMINI_API_KEY` is set, each draft gets a **Rewrite with Gemini** button. Th
 - **What it sends:** only the business name, trade, town, state, review count, rating, the website finding and the template text. It never sends the lead's phone number, address, notes or outreach history. The key goes in a request header, never the URL.
 - **Voice and accuracy:** the instructions repeat the voice rules and tell it not to invent facts, quote prices the template doesn't, or offer deals. The app also strips any exclamation marks. Emails get the signature and compliance footer added after the rewrite, so the model can't drop them.
 - **Get a key:** create one in Google AI Studio. On the free tier, Google may use what you send to improve its products, so turn on billing for the key's project if that matters to you.
+
+## Compliance reminders (Phase 6)
+
+**This is a reminder for how the app is built to behave, not legal advice.** Rules change and differ by state. If you're unsure, ask a lawyer who handles marketing law.
+
+### What the app does for you
+
+- **Never sends anything.** Calls are manual (click to call). Emails are drafts you copy or open in your mail app. There is no bulk email and no texting automation in v1.
+- **One do-not-contact list.** Marking a lead "do not contact" (call list, lead page or bulk) adds its phone and name to the `suppression` table. Find leads never re-imports a suppressed business, "Add to queue" skips it, and it gets no drafts. Changing the status later does not remove it.
+- **Every email carries** your business name, your mailing address and a plain opt-out line, and is blocked without `BUSINESS_MAILING_ADDRESS`.
+
+### Email: CAN-SPAM
+
+The federal CAN-SPAM Act covers commercial email, **including business-to-business** email. The FTC's [compliance guide](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) is short and worth a read. In short:
+
+- Send from your real address. Don't disguise who you are.
+- Keep subject lines honest. The drafts' subjects describe what's in the email.
+- Say it's an ad where that isn't obvious. The drafts are plainly a sales note from a named sender.
+- Include a valid physical postal address. A registered PO box or registered private mailbox counts. Put it in `BUSINESS_MAILING_ADDRESS`.
+- Honor opt-outs. The law gives you up to 10 business days; do it the same day. When someone replies "stop" (or anything like it), open the lead, set the status to **Do not contact**, and don't email or call them again. Don't charge for or require anything to opt out.
+- The FTC lists penalties of more than $50,000 per violating email, so one careless mistake isn't worth it.
+
+### Text messages: TCPA and carrier rules
+
+Marketing texts to cell phones generally need the recipient's **prior express written consent** under the federal Telephone Consumer Protection Act, and automated texting also runs into carrier registration rules (10DLC). Many small-business owners list a personal cell number. **That is why v1 has no texting automation, and I'd advise against cold texting too.** "Text" exists in the outreach log only so you can record a message you chose to send yourself.
+
+If you later sell the missed-call text-back or review-request automation to clients, the texting rules apply to *them* and the messages they send to their customers. Get the consent wording right before you offer it.
+
+### Calls: do-not-call and calling hours
+
+- The **National Do Not Call Registry** is aimed at personal numbers, and calls to businesses are generally treated differently. But a sole proprietor's cell phone can count as personal, so treat any cell number with care. You can check numbers at [donotcall.gov](https://www.donotcall.gov).
+- You must keep and honor your own do-not-call list. That's the `suppression` table. If someone says "don't call me again", mark them do not contact right away.
+- **Calling hours.** Federal rules say 8am to 9pm in the *called person's* local time. State rules can be tighter, and these are from vendor summaries, so **verify them**:
+  - **Massachusetts:** reported as 8am to 8pm.
+  - **Rhode Island:** reported as weekdays 9am to 6pm and Saturdays 10am to 5pm for residential and mobile numbers, with no calls on legal holidays.
+  - **New Hampshire:** I couldn't confirm its rules. Check them yourself.
+- **A simple rule that fits all three states:** call weekdays between 9am and 5pm Eastern, skip holidays, and never call after a "don't call again". The app schedules follow-ups for 9am Eastern.
+- **Business-to-business exemptions.** Some state telemarketing rules treat calls to businesses differently, and I couldn't confirm how each of the three states does. Don't assume you're exempt.
+
+## Scheduled job (Phase 6)
+
+A Vercel cron job runs once a day at 11:00 UTC (7am or 6am Eastern, depending on daylight saving). It calls `GET /api/cron/maintain`, which:
+
+1. Re-fetches Google details for up to 10 leads not refreshed in 30 days (oldest first), counting each against `MAX_PLACES_REQUESTS_PER_DAY`.
+2. Scores up to 5 leads that haven't been scored yet, one at a time.
+
+The batches are small on purpose. Use **Score websites now** on the dashboard for a big backlog.
+
+- **It is protected by `CRON_SECRET`.** Add a long random value as an env var in Vercel. Vercel then sends it as `Authorization: Bearer <CRON_SECRET>` on every cron call. Without the variable the route answers 503, and with a wrong or missing header it answers 401. Generate one with `openssl rand -hex 32`.
+- **It needs `SUPABASE_SECRET_KEY`.** The job has no signed-in user, so it uses the server-only service key to do its work. That key bypasses row-level security, so it is only ever used in this route, never sent to a browser and never logged.
+- **It needs migration `20261016210000_cron_places_reserve.sql`,** which adds a Places-quota function that only the service role can run. Apply it before the first run.
+- **Vercel's free (Hobby) plan allows cron jobs that run once a day.** The schedule is in `vercel.json`. On a paid plan you can run it more often.
+- **To test it by hand,** run `curl -H "Authorization: Bearer YOUR_SECRET" https://YOUR-SITE/api/cron/maintain`. It returns a short JSON summary.
+
+## Password reset
+
+On the sign-in page, **Forgot your password?** emails a reset link that returns to the app and opens a "choose a new password" page. Once signed in, **Change password** in the sidebar opens the same page. Only the owner's email gets a link, and the page gives the same answer for any email, so it doesn't reveal which one is allowed.
+
+In Supabase, go to **Authentication → URL Configuration**. Set the **Site URL** to your deployed address, and add these under **Redirect URLs**, or the link will fall back to the Site URL and land on the sign-in page:
+
+- `http://localhost:3000/**`
+- `https://YOUR-SITE/**`
+
+Supabase's built-in email service only sends a few messages an hour. If you hit "email rate limit exceeded", wait an hour, or add your own email service under **Authentication → SMTP Settings**.
+
+## API safety and tests
+
+- **Every route that takes input validates it with zod** and answers errors as `{ "error": "..." }` with a matching status code. Unexpected errors are logged on the server and the browser only sees "Something went wrong. Try again." No stack traces leave the server. The CSV export rejects bad filters with a 400.
+- **Every API route requires the signed-in owner**, except `/api/cron/*`, which requires the `CRON_SECRET` instead.
+- `npm test` runs the unit tests, including the priority function, the import and dedupe logic, the suppression list, the website scorer's parsing (with mocked network responses), the drafts, and the cron secret check.
 
 ## How access is locked down
 

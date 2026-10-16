@@ -24,11 +24,11 @@ export function staleCutoff(now = new Date()): string {
  */
 export async function refreshStaleLeads(
   supabase: Client,
-  config: { apiKey: string; dailyLimit: number; limit: number },
+  config: { apiKey: string; dailyLimit: number; limit: number; /** Cron only: reserve quota for each lead's owner instead of the signed-in user. */ asOwner?: boolean },
 ): Promise<RefreshSummary> {
   const { data: stale, error } = await supabase
     .from("leads")
-    .select("id, place_id, business_name, website_url")
+    .select("id, owner_id, place_id, business_name, website_url")
     .lt("last_refreshed_at", staleCutoff())
     .order("last_refreshed_at", { ascending: true })
     .limit(config.limit);
@@ -42,7 +42,7 @@ export async function refreshStaleLeads(
 
   for (const lead of stale ?? []) {
     try {
-      usage = await reservePlacesRequest(supabase, config.dailyLimit);
+      usage = await reservePlacesRequest(supabase, config.dailyLimit, config.asOwner ? lead.owner_id : undefined);
     } catch (reserveError) {
       if (!(reserveError instanceof DailyLimitError)) throw reserveError;
       usage = reserveError.usage;

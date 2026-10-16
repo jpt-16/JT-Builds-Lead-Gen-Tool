@@ -62,7 +62,14 @@ export function SidebarContent({
         <p className="truncate text-xs text-nav-muted" title={email}>
           {email}
         </p>
-        <form action={signOutAction} className="mt-2">
+        <Link
+          href="/reset-password"
+          onClick={onNavigate}
+          className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-nav-ink hover:text-white"
+        >
+          Change password
+        </Link>
+        <form action={signOutAction}>
           <button type="submit" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-nav-ink hover:text-white">
             <SignOutIcon className="size-4" />
             Sign out

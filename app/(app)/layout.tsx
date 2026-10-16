@@ -34,7 +34,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <header className="z-20 border-b border-line bg-surface lg:sticky lg:top-0">
             <div className="flex min-h-14 items-center gap-2 px-3 sm:px-6">
               <MobileNav email={owner.email} signOutAction={signOut} contentId={CONTENT_ID} />
-              <Link href="/dashboard" className="mr-1 shrink-0 lg:hidden" aria-label="JT Builds Co Lead Engine, dashboard">
+              <Link
+                href="/dashboard"
+                className="mr-1 inline-flex min-h-11 shrink-0 items-center lg:hidden"
+                aria-label="JT Builds Co Lead Engine, dashboard"
+              >
                 <BrandMark height={22} variant="dark" />
               </Link>
               <div className="flex flex-1 justify-end sm:justify-start">

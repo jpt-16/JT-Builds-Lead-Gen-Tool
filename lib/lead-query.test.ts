@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtersToParams, parseLeadFilters } from "./lead-query";
+import { filtersToParams, leadQuerySchema, parseLeadFilters } from "./lead-query";
 
 describe("parseLeadFilters", () => {
   it("defaults to priority, highest first, page 1", () => {
@@ -18,7 +18,18 @@ describe("parseLeadFilters", () => {
       sort: "reviews",
       page: "3",
     });
-    expect(f).toMatchObject({ q: "acme", status: "replied", site: "no_real", state: "MA", scoreMin: 0, scoreMax: 100, reviewsMax: 15, sort: "reviews", dir: "asc", page: 3 });
+    expect(f).toMatchObject({
+      q: "acme",
+      status: "replied",
+      site: "no_real",
+      state: "MA",
+      scoreMin: 0,
+      scoreMax: 100,
+      reviewsMax: 15,
+      sort: "reviews",
+      dir: "asc",
+      page: 3,
+    });
     expect(parseLeadFilters({ status: "bogus", site: "bogus", sort: "bogus", page: "x" })).toMatchObject({
       status: undefined,
       site: undefined,
@@ -38,5 +49,43 @@ describe("filtersToParams", () => {
     const f = parseLeadFilters({ q: "acme", trade: "plumber", sort: "priority", dir: "desc", page: "1" });
     expect(filtersToParams(f).toString()).toBe("q=acme&trade=plumber");
     expect(filtersToParams(f, { page: 2, sort: "name", dir: "asc" }).toString()).toBe("q=acme&trade=plumber&sort=name&page=2");
+  });
+});
+
+describe("leadQuerySchema", () => {
+  const ok = (params: Record<string, string>) => leadQuerySchema.safeParse(params).success;
+
+  it("accepts what the leads table links to", () => {
+    expect(ok({})).toBe(true);
+    expect(
+      ok({
+        q: "alpha",
+        trade: "plumber",
+        state: "ma",
+        status: "new",
+        site: "no_real",
+        scoreMin: "10",
+        scoreMax: "60",
+        sort: "score",
+        dir: "asc",
+        page: "2",
+      }),
+    ).toBe(true);
+    expect(ok({ trade: "", status: "", scoreMin: "" })).toBe(true);
+    expect(ok({ ids: "4df0b52c-0f59-4747-be8d-8a1bfb4bf65b,7fa3f2a7-7f73-4595-9ff8-4ce70d52de07" })).toBe(true);
+  });
+
+  it.each([
+    ["unknown status", { status: "hot" }],
+    ["unknown state", { state: "TX" }],
+    ["score out of range", { scoreMax: "500" }],
+    ["score not a number", { scoreMin: "abc" }],
+    ["unknown sort", { sort: "random" }],
+    ["bad direction", { dir: "sideways" }],
+    ["page zero", { page: "0" }],
+    ["too-long search", { q: "x".repeat(101) }],
+    ["bad ids", { ids: "1,2,3" }],
+  ])("rejects %s", (_label, params) => {
+    expect(ok(params)).toBe(false);
   });
 });

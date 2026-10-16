@@ -71,11 +71,19 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
   }
 
   function snooze(row: Row, days: number, label: string) {
-    act(row, () => post(`/api/leads/${row.id}`, "PATCH", { snooze_days: days }), () => `Snoozed ${row.business_name} until ${label.toLowerCase()}.`);
+    act(
+      row,
+      () => post(`/api/leads/${row.id}`, "PATCH", { snooze_days: days }),
+      () => `Snoozed ${row.business_name} until ${label.toLowerCase()}.`,
+    );
   }
 
   function setStatus(row: Row, status: LeadStatus) {
-    act(row, () => post(`/api/leads/${row.id}`, "PATCH", { status }), () => `${row.business_name} is now ${STATUS_LABELS[status].toLowerCase()}.`);
+    act(
+      row,
+      () => post(`/api/leads/${row.id}`, "PATCH", { status }),
+      () => `${row.business_name} is now ${STATUS_LABELS[status].toLowerCase()}.`,
+    );
   }
 
   function doNotContact(row: Row) {
@@ -127,7 +135,8 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
           Today&apos;s call list
         </h2>
         <p className="hidden text-xs text-muted md:block">
-          <Kbd>j</Kbd>/<Kbd>k</Kbd> move · {QUICK_OUTCOMES.map((o, i) => (
+          <Kbd>j</Kbd>/<Kbd>k</Kbd> move ·{" "}
+          {QUICK_OUTCOMES.map((o, i) => (
             <span key={o}>
               <Kbd>{i + 1}</Kbd> {OUTCOME_LABELS[o]} ·{" "}
             </span>
@@ -141,9 +150,7 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
       </div>
 
       {rows.length === 0 && (
-        <p className="card text-sm text-muted">
-          Nothing left for today. Find more leads, or check back when follow-ups come due.
-        </p>
+        <p className="card text-sm text-muted">Nothing left for today. Find more leads, or check back when follow-ups come due.</p>
       )}
 
       {[
@@ -184,14 +191,17 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
                           <span className="text-sm text-danger">No phone listed</span>
                         )}
                         {row.website_url && row.site_status !== "social" ? (
-                          <a href={row.website_url} target="_blank" rel="noopener noreferrer" className="btn-link text-sm">
+                          <a
+                            href={row.website_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-link inline-flex min-h-11 items-center text-sm"
+                          >
                             {row.site_status && SITE_TEXT[row.site_status] ? SITE_TEXT[row.site_status] : "Website"}
                             {row.score_total !== null ? ` · ${row.score_total}/100` : ""}
                           </a>
                         ) : (
-                          <span className="text-sm text-ink-2">
-                            {row.site_status ? (SITE_TEXT[row.site_status] ?? "No website") : "No website"}
-                          </span>
+                          <span className="text-sm text-ink-2">{row.site_status ? (SITE_TEXT[row.site_status] ?? "No website") : "No website"}</span>
                         )}
                       </div>
 
@@ -247,7 +257,10 @@ function LeadSummary({ row }: { row: Row }) {
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/leads/${row.id}`} className="text-base font-semibold text-ink hover:text-accent hover:underline">
+          <Link
+            href={`/leads/${row.id}`}
+            className="inline-flex min-h-11 items-center text-base font-semibold text-ink hover:text-accent hover:underline"
+          >
             {row.business_name}
           </Link>
           <StatusBadge status={row.status} />
@@ -289,13 +302,7 @@ function MoreActions(props: {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[13px] font-semibold text-ink-2">Snooze</span>
           {SNOOZE_OPTIONS.map((s) => (
-            <button
-              key={s.days}
-              type="button"
-              className="btn-secondary"
-              disabled={props.disabled}
-              onClick={() => props.onSnooze(s.days, s.label)}
-            >
+            <button key={s.days} type="button" className="btn-secondary" disabled={props.disabled} onClick={() => props.onSnooze(s.days, s.label)}>
               {s.label}
             </button>
           ))}

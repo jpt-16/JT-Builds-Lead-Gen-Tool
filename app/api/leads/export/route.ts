@@ -1,7 +1,7 @@
 import { getApiOwner, jsonError, unexpectedError } from "@/lib/api";
 import { toCsv } from "@/lib/csv";
 import { easternDate } from "@/lib/dates";
-import { buildLeadsQuery, parseLeadFilters } from "@/lib/lead-query";
+import { buildLeadsQuery, leadQuerySchema, parseLeadFilters } from "@/lib/lead-query";
 
 const MAX_ROWS = 5000;
 
@@ -36,6 +36,12 @@ export async function GET(request: Request) {
   if (!auth) return jsonError(401, "Not signed in.");
 
   const params = Object.fromEntries(new URL(request.url).searchParams);
+  const parsed = leadQuerySchema.safeParse(params);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return jsonError(400, `${issue?.path.join(".") || "query"}: ${issue?.message ?? "Invalid filter."}`);
+  }
+  // The schema only checks the input; the same tolerant parser as the page builds the filters.
   const filters = parseLeadFilters(params);
 
   try {

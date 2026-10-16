@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import type { Database, LeadStatus } from "@/lib/database.types";
+import { STATES } from "@/lib/find-leads-config";
 import { LEAD_STATUSES } from "@/lib/leads-config";
 
 // Filters, sorting and paging for the leads table and the CSV export.
@@ -88,6 +90,37 @@ export function parseLeadFilters(params: Params): LeadFilters {
   };
 }
 
+// Strict version of the filters for the CSV export, which rejects bad input
+// with a 400 instead of quietly ignoring it like the page does. A blank value
+// counts as not set.
+const blank = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
+const text = z.preprocess(blank, z.string().trim().max(100).optional());
+const num = (max: number) => z.preprocess(blank, z.coerce.number().int().min(0).max(max).optional());
+
+export const leadQuerySchema = z.object({
+  q: text,
+  trade: text,
+  city: text,
+  state: z.preprocess((v) => (typeof v === "string" ? v.trim().toUpperCase() || undefined : v), z.enum(STATES).optional()),
+  status: z.preprocess(blank, z.enum(LEAD_STATUSES).optional()),
+  site: z.preprocess(blank, z.enum(Object.keys(SITE_FILTERS) as [SiteFilter, ...SiteFilter[]]).optional()),
+  scoreMin: num(100),
+  scoreMax: num(100),
+  reviewsMin: num(1_000_000),
+  reviewsMax: num(1_000_000),
+  sort: z.preprocess(blank, z.enum(Object.keys(SORTS) as [SortKey, ...SortKey[]]).optional()),
+  dir: z.preprocess(blank, z.enum(["asc", "desc"]).optional()),
+  page: z.preprocess(blank, z.coerce.number().int().min(1).max(10_000).optional()),
+  ids: z.preprocess(
+    blank,
+    z
+      .string()
+      .regex(/^[0-9a-f-]{36}(,[0-9a-f-]{36})*$/i, "ids must be a comma-separated list of lead ids")
+      .max(37 * 1000)
+      .optional(),
+  ),
+});
+
 /** Characters that would break PostgREST's or() / ilike syntax. */
 function cleanSearch(text: string): string {
   return text.replace(/[%_,()*\\"]/g, " ").trim();
@@ -113,9 +146,7 @@ export function buildLeadsQuery(supabase: Client, filters: LeadFilters, columns:
   if (filters.reviewsMin !== undefined) query = query.gte("review_count", filters.reviewsMin);
   if (filters.reviewsMax !== undefined) query = query.lte("review_count", filters.reviewsMax);
 
-  return query
-    .order(SORTS[filters.sort].column, { ascending: filters.dir === "asc", nullsFirst: false })
-    .order("id", { ascending: true });
+  return query.order(SORTS[filters.sort].column, { ascending: filters.dir === "asc", nullsFirst: false }).order("id", { ascending: true });
 }
 
 /** Search params for a filters object, for links (sorting, paging, export). */
