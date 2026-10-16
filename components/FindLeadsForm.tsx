@@ -106,18 +106,16 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
   return (
     <section className="card space-y-5" aria-labelledby="search-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="search-heading" className="text-lg font-medium">
+        <h2 id="search-heading" className="text-base font-semibold text-ink">
           Search
         </h2>
-        <fieldset className="flex gap-1" disabled={running}>
+        <fieldset className="inline-flex rounded-lg border border-line bg-surface-2 p-1" disabled={running}>
           <legend className="sr-only">Search mode</legend>
           {(["single", "bulk"] as const).map((m) => (
             <label
               key={m}
-              className={`inline-flex min-h-11 cursor-pointer items-center rounded-md border px-4 text-xs font-medium tracking-[0.18em] uppercase transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-3 has-focus-visible:outline-accent-500 ${
-                mode === m
-                  ? "border-accent-500 bg-accent-500/12 text-accent-400"
-                  : "border-neutral-500 text-neutral-200 hover:border-neutral-300"
+              className={`inline-flex min-h-10 cursor-pointer items-center rounded-md px-4 text-sm font-semibold transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent ${
+                mode === m ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-ink-2 hover:text-ink"
               }`}
             >
               <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => setMode(m)} className="sr-only" />
@@ -299,7 +297,7 @@ function TownResultCard({ result }: { result: TownResult }) {
   if (status !== "done" || !summary) {
     const text = { pending: "Waiting", running: "Searching…", error: message ?? "Failed", skipped: message ?? "Skipped", done: "" }[status];
     return (
-      <div className={`rounded-md border p-3 text-sm ${status === "error" ? "border-danger/40 bg-danger/10 text-danger" : "border-divider"}`}>
+      <div className={`rounded-md border p-3 text-sm ${status === "error" ? "border-danger-line bg-danger-soft text-danger" : "border-line"}`}>
         <span className="font-medium">{label}:</span> {text}
       </div>
     );
@@ -312,7 +310,7 @@ function TownResultCard({ result }: { result: TownResult }) {
   ].filter(Boolean);
 
   return (
-    <details className="rounded-md border border-divider p-3 text-sm">
+    <details className="rounded-md border border-line p-3 text-sm">
       <summary className="cursor-pointer">
         <span className="font-medium">{label}:</span> {summary.resultsFound} found, {summary.newLeads} new,{" "}
         {summary.updatedLeads} already in list. {summary.requestsUsed} requests.
@@ -331,7 +329,7 @@ function TownResultCard({ result }: { result: TownResult }) {
                 <th scope="col" className="py-1 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-divider">
+            <tbody className="divide-y divide-line">
               {summary.businesses.map((b) => (
                 <tr key={b.place_id}>
                   <td className="py-1 pr-3">{b.business_name}</td>

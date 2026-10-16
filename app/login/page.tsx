@@ -17,10 +17,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-4 py-10">
-      <BrandMark height={38} />
-      <h1 className="eyebrow mt-8">Lead Engine</h1>
-      <p className="mt-2 text-sm text-muted">Private. Owner access only.</p>
-      <div className="card mt-8">
+      <BrandMark height={38} variant="dark" />
+      <h1 className="mt-8 text-2xl font-semibold tracking-tight text-ink">Lead Engine</h1>
+      <p className="mt-1 text-sm text-muted">Private. Owner access only.</p>
+      <div className="card mt-6">
         <LoginForm next={next} notice={notice} />
       </div>
     </main>

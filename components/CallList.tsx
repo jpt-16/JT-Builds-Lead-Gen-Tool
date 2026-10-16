@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PhoneIcon } from "@/components/Icons";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { LeadStatus, OutreachOutcome } from "@/lib/database.types";
 import { formatDay } from "@/lib/format";
@@ -122,12 +123,9 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
   return (
     <section aria-labelledby="calls-heading" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="eyebrow">Today</p>
-          <h2 id="calls-heading" className="mt-1 text-2xl">
-            Call list
-          </h2>
-        </div>
+        <h2 id="calls-heading" className="scroll-mt-20 text-lg font-semibold text-ink">
+          Today&apos;s call list
+        </h2>
         <p className="hidden text-xs text-muted md:block">
           <Kbd>j</Kbd>/<Kbd>k</Kbd> move · {QUICK_OUTCOMES.map((o, i) => (
             <span key={o}>
@@ -155,7 +153,7 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
         (group) =>
           group.items.length > 0 && (
             <div key={group.title} className="space-y-3">
-              <h3 className="text-xs tracking-[0.2em] text-muted uppercase">
+              <h3 className="eyebrow">
                 {group.title} ({group.items.length})
               </h3>
               <ol className="space-y-3">
@@ -171,7 +169,7 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
                       onFocus={() => setSelected(index)}
                       onClick={() => setSelected(index)}
                       aria-current={isSelected ? "true" : undefined}
-                      className={`card space-y-3 transition-shadow ${isSelected ? "shadow-[0_0_0_1px_var(--color-accent-500)]" : ""} ${
+                      className={`card space-y-3 transition-shadow ${isSelected ? "ring-2 ring-accent" : ""} ${
                         busyId === row.id ? "opacity-60" : ""
                       }`}
                     >
@@ -179,8 +177,8 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
 
                       <div className="flex flex-wrap items-center gap-3">
                         {row.phone ? (
-                          <a href={`tel:${row.phone}`} className="btn-primary min-h-12 grow text-sm sm:grow-0">
-                            Call {row.phone}
+                          <a href={`tel:${row.phone}`} className="btn-primary min-h-12 grow sm:grow-0">
+                            <PhoneIcon className="size-4" /> Call {row.phone}
                           </a>
                         ) : (
                           <span className="text-sm text-danger">No phone listed</span>
@@ -191,7 +189,7 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
                             {row.score_total !== null ? ` · ${row.score_total}/100` : ""}
                           </a>
                         ) : (
-                          <span className="text-sm text-neutral-200">
+                          <span className="text-sm text-ink-2">
                             {row.site_status ? (SITE_TEXT[row.site_status] ?? "No website") : "No website"}
                           </span>
                         )}
@@ -213,7 +211,7 @@ export function CallList({ due, fresh }: { due: CallListLead[]; fresh: CallListL
                           <button
                             key={outcome}
                             type="button"
-                            className="btn-secondary min-h-12 px-2 normal-case tracking-normal"
+                            className="btn-secondary min-h-12 px-2"
                             disabled={busyId !== null}
                             onClick={() => logOutcome(row, outcome)}
                           >
@@ -249,7 +247,7 @@ function LeadSummary({ row }: { row: Row }) {
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/leads/${row.id}`} className="text-lg text-ink hover:text-accent-400">
+          <Link href={`/leads/${row.id}`} className="text-base font-semibold text-ink hover:text-accent hover:underline">
             {row.business_name}
           </Link>
           <StatusBadge status={row.status} />
@@ -258,11 +256,11 @@ function LeadSummary({ row }: { row: Row }) {
           {[row.trade, place].filter(Boolean).join(" · ")}
           {row.section === "due" && row.next_follow_up_at && ` · Follow-up due ${formatDay(row.next_follow_up_at)}`}
         </p>
-        {row.why_this_lead && <p className="mt-1 text-sm text-neutral-200">{row.why_this_lead}</p>}
+        {row.why_this_lead && <p className="mt-1 text-sm text-ink-2">{row.why_this_lead}</p>}
       </div>
       <span className="shrink-0 text-right">
-        <span className="block text-2xl text-accent-400 tabular-nums">{row.priority_score}</span>
-        <span className="block text-[11px] tracking-[0.12em] text-muted uppercase">Priority</span>
+        <span className="block text-2xl font-bold text-accent tabular-nums">{row.priority_score}</span>
+        <span className="block text-[11px] font-semibold text-muted uppercase">Priority</span>
       </span>
     </div>
   );
@@ -280,21 +278,21 @@ function MoreActions(props: {
   return (
     <details className="col-span-2 sm:col-span-5">
       <summary className="btn-link inline-flex min-h-11 cursor-pointer items-center text-sm">More actions</summary>
-      <div className="mt-2 space-y-3 rounded-md border border-divider p-3">
+      <div className="mt-2 space-y-3 rounded-md border border-line p-3">
         <div className="flex flex-wrap gap-2">
           {(["not_interested", "wrong_number"] as const).map((o) => (
-            <button key={o} type="button" className="btn-secondary normal-case tracking-normal" disabled={props.disabled} onClick={() => props.onOutcome(o)}>
+            <button key={o} type="button" className="btn-secondary" disabled={props.disabled} onClick={() => props.onOutcome(o)}>
               {OUTCOME_LABELS[o]}
             </button>
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs tracking-[0.12em] text-muted uppercase">Snooze</span>
+          <span className="text-[13px] font-semibold text-ink-2">Snooze</span>
           {SNOOZE_OPTIONS.map((s) => (
             <button
               key={s.days}
               type="button"
-              className="btn-secondary normal-case tracking-normal"
+              className="btn-secondary"
               disabled={props.disabled}
               onClick={() => props.onSnooze(s.days, s.label)}
             >
@@ -322,7 +320,7 @@ function MoreActions(props: {
             Set status
           </button>
         </div>
-        <button type="button" className="btn border-danger/60 text-danger hover:bg-danger/10" disabled={props.disabled} onClick={props.onDnc}>
+        <button type="button" className="btn-danger" disabled={props.disabled} onClick={props.onDnc}>
           Do not contact
         </button>
       </div>
@@ -331,7 +329,7 @@ function MoreActions(props: {
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-sm border border-neutral-600 px-1 font-sans text-neutral-200">{children}</kbd>;
+  return <kbd className="rounded border border-line-strong bg-surface px-1 font-sans text-[11px] font-semibold text-ink-2">{children}</kbd>;
 }
 
 function toRows(due: CallListLead[], fresh: CallListLead[]): Row[] {

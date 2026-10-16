@@ -39,7 +39,7 @@ export function LogOutreachForm({ leadId }: { leadId: string }) {
 
   return (
     <form onSubmit={submit} className="card space-y-4" aria-labelledby="log-heading">
-      <h2 id="log-heading" className="text-lg">
+      <h2 id="log-heading" className="text-base font-semibold text-ink">
         Log outreach
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">

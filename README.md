@@ -4,7 +4,7 @@ Private, single-user tool that finds, scores, ranks and tracks local-business pr
 
 **Status:** Phases 1 to 4 are done: foundation, lead discovery, website scoring with priority, and the daily call list, leads table and lead pages. Outreach drafts, compliance notes, cron jobs and the full deployment checklist come in later phases.
 
-The look matches jtbuildsco.com (its "Nocturne" design system: dark, Inter, one blurple accent, outlined buttons).
+The layout borrows from analytics tools like Semrush: a dark sidebar with breadcrumbs, a light work area, metric cards with weekly trends, a website health gauge with issues grouped by severity, and pill filters with a column picker. Colours and the logo come from jtbuildsco.com (Inter, one blurple accent). Every text and control colour passes WCAG AA; the values are in the header comment of `app/globals.css`.
 
 ## Stack
 
@@ -121,11 +121,13 @@ After changing the weights, press "Recalculate priorities" on the dashboard. The
 
 ### Dashboard: today's call list
 
-- **Stats** at the top: leads found this week, then contacted, replies, calls booked and won, each with the conversion from the stage before, plus a simple funnel. A lead counts at every stage it ever reached, so a lead that later went cold still counts as contacted.
+- **Metric cards** at the top: leads found, outreach logged, conversations and calls booked this week, each with the change from last week and an 8-week sparkline (Eastern-time weeks starting Monday).
+- **Pipeline:** leads, contacted, replies, calls booked and won, each with the conversion from the stage before. A lead counts at every stage it ever reached, so a lead that later went cold still counts as contacted.
+- **Website health:** how many leads have no real website, a weak site (under 50), a fair site (50 to 79), a good site (80+) or are not checked yet. Each line links to the leads table filtered to that group. The scoring buttons live here too.
 - **Follow-ups due** today or overdue come first, then **fresh leads**: everything you queued, then the highest-priority new leads, up to 30 (`CALL_LIST_SIZE` in `lib/leads-config.ts`). Leads snoozed to a later day stay off the list.
 - Each card has a big call button, the website or "No website", the score, and the "why this lead" line. One tap logs an outcome. "More actions" has not interested, wrong number, snooze, set status and do not contact.
 - **Keyboard:** `j`/`k` or the arrow keys move, `1` to `5` log No answer, Voicemail, Spoke, Interested or Booked on the selected lead, `o` opens it. Shortcuts are ignored while typing in a field. Each action takes the lead off today's list and moves to the next one.
-- On a phone the header scrolls away, cards are full width and every button is at least 44px tall.
+- On a phone the sidebar becomes a menu drawer (tap the menu button, swipe or tap outside to close), cards are full width and every button is at least 44px tall.
 
 ### What logging an outcome does
 
@@ -149,11 +151,13 @@ Marking a lead do not contact (call list, lead page, or bulk) also adds its phon
 
 ### Leads table (`/leads`)
 
-Search (name, phone, town, notes), filters (trade, town, state, status, website, site score range, review count range), sorting by any underlined column, and 50 per page. Filters live in the URL, so a filtered view can be bookmarked. Bulk actions: add to queue (new leads only), set any status, export the selection, or export everything matching the filters as CSV. The CSV defuses spreadsheet formulas in names and notes.
+A search box and filter pills (trade, status, location, website, site score range, review count range). Each pill opens a small panel; active filters show as chips you can remove one at a time. Sorting by any underlined column, and 50 per page. Filters live in the URL, so a filtered view can be bookmarked. The **Columns** pill hides columns you don't need; the choice is remembered in this browser. Site scores show as small coloured rings with the number inside.
+
+Bulk actions: add to queue (new leads only), set any status, or export the selection. **Export CSV** at the top exports everything matching the filters. The CSV defuses spreadsheet formulas in names and notes.
 
 ### Lead page (`/leads/[id]`)
 
-Contact details, a form to log any channel and outcome with a note, the outreach history timeline, the editable fields (status, next follow-up, trade, notes), the website score breakdown, and the outreach drafts panel, which arrives in Phase 5. Google-sourced fields aren't editable because the 30-day refresh would overwrite them.
+Contact details and priority, a **Website health** panel (score gauge, error/warning/notice counts, and each problem with a plain-English fix), a form to log any channel and outcome with a note, the outreach history timeline, the editable fields (status, next follow-up, trade, notes), and the outreach drafts panel, which arrives in Phase 5. Severity rules for the health panel are in `lib/site-issues.ts`. Google-sourced fields aren't editable because the 30-day refresh would overwrite them.
 
 ## How access is locked down
 

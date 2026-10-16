@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { FindLeadsForm } from "@/components/FindLeadsForm";
+import { PageHeader } from "@/components/PageHeader";
 import { RefreshStalePanel } from "@/components/RefreshStalePanel";
 import { formatDateTime, metersToMiles } from "@/lib/format";
 import { getPlacesConfig, getUsageToday } from "@/lib/places-usage";
 import { countStaleLeads } from "@/lib/refresh";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Find leads | JT Builds Co Lead Engine" };
+export const metadata: Metadata = {
+  title: "Find leads | JT Builds Co Lead Engine",
+};
 
 export default async function FindLeadsPage() {
   const supabase = await createClient();
@@ -26,69 +29,78 @@ export default async function FindLeadsPage() {
   } catch (error) {
     console.error("find page:", error instanceof Error ? error.message : error);
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-medium tracking-tight">Find leads</h1>
+      <>
+        <PageHeader crumbs={[{ label: "Find leads" }]} title="Find leads" />
         <p role="alert" className="alert-error">
-          The database is missing something this page needs. Check that every file in supabase/migrations has been
-          applied, then reload.
+          The database is missing something this page needs. Check that every file in supabase/migrations has been applied, then reload.
         </p>
-      </div>
+      </>
     );
   }
   const [usage, staleCount, runsResult] = data;
   const runs = runsResult.data ?? [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-medium tracking-tight">Find leads</h1>
+    <>
+      <PageHeader
+        crumbs={[{ label: "Find leads" }]}
+        title="Find leads"
+        description="Search Google Places by trade and town. New businesses land in Leads, ranked."
+      />
 
-      {!apiKey && (
-        <p role="alert" className="alert-error">
-          GOOGLE_PLACES_API_KEY is not set. Add it to .env.local (or Vercel env vars) and restart before searching.
-        </p>
-      )}
-
-      <FindLeadsForm initialUsage={usage} />
-
-      <RefreshStalePanel staleCount={staleCount} />
-
-      <section className="card space-y-3" aria-labelledby="runs-heading">
-        <h2 id="runs-heading" className="text-lg font-medium">
-          Recent searches
-        </h2>
-        {runs.length === 0 ? (
-          <p className="text-sm text-muted">No searches yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-muted">
-                <tr>
-                  <th scope="col" className="py-2 pr-3 font-medium">When</th>
-                  <th scope="col" className="py-2 pr-3 font-medium">Trade</th>
-                  <th scope="col" className="py-2 pr-3 font-medium">Town</th>
-                  <th scope="col" className="py-2 pr-3 font-medium">Radius</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Found</th>
-                  <th scope="col" className="py-2 text-right font-medium">New</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider">
-                {runs.map((run) => (
-                  <tr key={run.id}>
-                    <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(run.created_at)}</td>
-                    <td className="py-2 pr-3">{run.trade}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {run.city}, {run.state}
-                    </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{metersToMiles(run.radius_m)} mi</td>
-                    <td className="py-2 pr-3 text-right">{run.results_found}</td>
-                    <td className="py-2 text-right">{run.new_leads_added}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="space-y-6">
+        {!apiKey && (
+          <p role="alert" className="alert-error">
+            GOOGLE_PLACES_API_KEY is not set. Add it to .env.local (or Vercel env vars) and restart before searching.
+          </p>
         )}
-      </section>
-    </div>
+
+        <FindLeadsForm initialUsage={usage} />
+
+        <RefreshStalePanel staleCount={staleCount} />
+
+        <section className="card space-y-3" aria-labelledby="runs-heading">
+          <h2 id="runs-heading" className="text-base font-semibold text-ink">
+            Recent searches
+          </h2>
+          {runs.length === 0 ? (
+            <p className="text-sm text-muted">No searches yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Trade</th>
+                    <th scope="col">Town</th>
+                    <th scope="col">Radius</th>
+                    <th scope="col" className="text-right">
+                      Found
+                    </th>
+                    <th scope="col" className="text-right">
+                      New
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => (
+                    <tr key={run.id}>
+                      <td className="whitespace-nowrap">{formatDateTime(run.created_at)}</td>
+                      <td>{run.trade}</td>
+                      <td className="whitespace-nowrap">
+                        {run.city}, {run.state}
+                      </td>
+                      <td className="whitespace-nowrap">{metersToMiles(run.radius_m)} mi</td>
+                      <td className="text-right tabular-nums">{run.results_found}</td>
+                      <td className="text-right tabular-nums">{run.new_leads_added}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </>
   );
 }

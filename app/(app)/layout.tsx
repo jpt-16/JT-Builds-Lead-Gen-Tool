@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { AppNav } from "@/components/AppNav";
 import { BrandMark } from "@/components/BrandMark";
+import { MobileNav } from "@/components/MobileNav";
+import { QuickSearch } from "@/components/QuickSearch";
 import { ScoringProvider, ScoringStatus } from "@/components/ScoringProvider";
+import { SidebarContent } from "@/components/Sidebar";
 import { requireOwner } from "@/lib/session";
 import { signOut } from "./actions";
 
-// Shell for every signed-in page. The proxy already blocks signed-out
-// requests; requireOwner() is a second check and gives us the email.
+const CONTENT_ID = "app-content";
+
+// Shell for every signed-in page: navy sidebar on desktop, a drawer on
+// phones, and a top bar with quick search and scoring progress. The proxy
+// already blocks signed-out requests; requireOwner() is a second check.
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const owner = await requireOwner();
 
@@ -14,35 +19,36 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <ScoringProvider>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-sm focus:border focus:border-accent-500 focus:bg-surface focus:px-4 focus:py-3 focus:text-xs focus:tracking-[0.18em] focus:uppercase"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:shadow-lg"
       >
         Skip to content
       </a>
-      {/* Sticky from tablet width up; on a phone it scrolls away to leave room for the call list. */}
-      <header className="z-10 bg-bg sm:sticky sm:top-0">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-1 px-4 py-2">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-1">
-            <Link href="/dashboard" className="inline-flex min-h-11 items-center transition-opacity hover:opacity-70">
-              <BrandMark height={30} />
-              <span className="ml-3 hidden text-xs tracking-[0.2em] text-muted uppercase sm:inline">Lead Engine</span>
-            </Link>
-            <AppNav />
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-muted md:inline">{owner.email}</span>
-            <form action={signOut}>
-              <button type="submit" className="btn-secondary">
-                Sign out
-              </button>
-            </form>
-          </div>
+
+      <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="sticky top-0 hidden h-dvh lg:block">
+          <SidebarContent email={owner.email} signOutAction={signOut} />
+        </aside>
+
+        <div id={CONTENT_ID} className="flex min-w-0 flex-col">
+          {/* Sticky on desktop; on a phone it scrolls away to leave room for the call list. */}
+          <header className="z-20 border-b border-line bg-surface lg:sticky lg:top-0">
+            <div className="flex min-h-14 items-center gap-2 px-3 sm:px-6">
+              <MobileNav email={owner.email} signOutAction={signOut} contentId={CONTENT_ID} />
+              <Link href="/dashboard" className="mr-1 shrink-0 lg:hidden" aria-label="JT Builds Co Lead Engine, dashboard">
+                <BrandMark height={22} variant="dark" />
+              </Link>
+              <div className="flex flex-1 justify-end sm:justify-start">
+                <QuickSearch />
+              </div>
+            </div>
+            <ScoringStatus />
+          </header>
+
+          <main id="main" tabIndex={-1} className="w-full max-w-7xl flex-1 px-3 py-6 focus:outline-none sm:px-6 lg:py-8">
+            {children}
+          </main>
         </div>
-        <ScoringStatus />
-        <div className="rule-fade" aria-hidden="true" />
-      </header>
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-8 focus:outline-none">
-        {children}
-      </main>
+      </div>
     </ScoringProvider>
   );
 }

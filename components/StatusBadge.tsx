@@ -3,19 +3,19 @@ import { STATUS_LABELS } from "@/lib/leads-config";
 
 // Status is always written out; colour only reinforces it.
 const TONE: Record<LeadStatus, string> = {
-  new: "border-neutral-500 text-neutral-200",
-  queued: "border-accent-500 text-accent-300",
-  contacted: "border-neutral-500 text-neutral-200",
-  replied: "border-accent-500 text-accent-300",
-  call_booked: "border-accent-400 text-accent-200",
-  won: "border-success/60 text-success",
-  lost: "border-neutral-600 text-muted",
-  do_not_contact: "border-danger/50 text-danger",
+  new: "bg-surface-2 text-ink-2 ring-line-strong/50",
+  queued: "bg-accent-soft text-accent ring-accent/30",
+  contacted: "bg-notice-soft text-notice ring-notice-line",
+  replied: "bg-accent-soft text-accent ring-accent/30",
+  call_booked: "bg-accent-soft text-accent ring-accent/30",
+  won: "bg-success-soft text-success ring-success-line",
+  lost: "bg-surface-2 text-muted ring-line",
+  do_not_contact: "bg-danger-soft text-danger ring-danger-line",
 };
 
 export function StatusBadge({ status }: { status: LeadStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[11px] tracking-[0.12em] uppercase ${TONE[status]}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ring-1 ring-inset ${TONE[status]}`}>
       {STATUS_LABELS[status]}
     </span>
   );

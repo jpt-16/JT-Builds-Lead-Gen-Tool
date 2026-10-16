@@ -34,7 +34,7 @@ export function RefreshStalePanel({ staleCount }: { staleCount: number }) {
 
   return (
     <section className="card space-y-3" aria-labelledby="refresh-heading">
-      <h2 id="refresh-heading" className="text-lg font-medium">
+      <h2 id="refresh-heading" className="text-base font-semibold text-ink">
         Refresh stale leads
       </h2>
       <p className="text-sm text-muted">

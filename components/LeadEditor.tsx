@@ -66,7 +66,7 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
 
   return (
     <form onSubmit={save} className="card space-y-4" aria-labelledby="edit-heading">
-      <h2 id="edit-heading" className="text-lg">
+      <h2 id="edit-heading" className="text-base font-semibold text-ink">
         Details
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -98,7 +98,7 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
           {busy ? "Saving…" : "Save"}
         </button>
         {lead.status !== "do_not_contact" && (
-          <button type="button" className="btn border-danger/60 text-danger hover:bg-danger/10" disabled={busy} onClick={doNotContact}>
+          <button type="button" className="btn-danger" disabled={busy} onClick={doNotContact}>
             Do not contact
           </button>
         )}

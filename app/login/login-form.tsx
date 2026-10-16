@@ -17,7 +17,7 @@ export function LoginForm({ next, notice }: { next: string; notice?: string }) {
 
   return (
     <form action={isSignIn ? signInAction : signUpAction} className="space-y-4">
-      <h2 className="text-lg font-medium">{isSignIn ? "Sign in" : "Create the owner account"}</h2>
+      <h2 className="text-base font-semibold text-ink">{isSignIn ? "Sign in" : "Create the owner account"}</h2>
 
       {error && (
         <p role="alert" className="alert-error">

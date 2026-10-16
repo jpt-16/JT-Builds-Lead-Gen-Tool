@@ -103,28 +103,44 @@ export function useScoring(): ScoringApi {
   return api;
 }
 
-/** Compact progress line for the header. */
+/** Slim progress strip under the top bar while scoring runs. */
 export function ScoringStatus() {
   const { state, stop } = useScoring();
   const visible = state.running || state.error;
+  const total = state.pending !== null ? state.done + state.pending : null;
+  const percent = total ? Math.round((state.done / total) * 100) : 0;
 
   return (
-    <div aria-live="polite" className="min-h-0">
+    <div aria-live="polite">
       {visible && (
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 pb-2 text-xs tracking-[0.12em] uppercase">
+        <div
+          className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-3 py-1.5 text-sm sm:px-6 ${
+            state.running ? "border-accent/20 bg-accent-soft text-accent" : "border-danger-line bg-danger-soft text-danger"
+          }`}
+        >
           {state.running ? (
             <>
-              <span className="text-accent-400">
-                Scoring websites · {state.done} done{state.pending !== null ? ` · ${state.pending} left` : ""}
+              <span className="font-medium">
+                Scoring websites: {state.done} done{state.pending !== null ? `, ${state.pending} left` : ""}
               </span>
-              <button type="button" onClick={stop} className="btn-link min-h-11 normal-case tracking-normal">
+              {total !== null && (
+                <span
+                  className="h-1.5 w-32 overflow-hidden rounded-full bg-surface"
+                  role="progressbar"
+                  aria-label="Scoring progress"
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <span className="block h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
+                </span>
+              )}
+              <button type="button" onClick={stop} className="btn-link min-h-9">
                 Stop after this one
               </button>
             </>
           ) : (
-            <span role="alert" className="text-danger normal-case tracking-normal">
-              {state.error}
-            </span>
+            <span role="alert">{state.error}</span>
           )}
         </div>
       )}
