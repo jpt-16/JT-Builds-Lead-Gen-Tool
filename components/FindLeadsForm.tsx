@@ -1,14 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useScoring } from "@/components/ScoringProvider";
 import {
   DEFAULT_RADIUS_METERS,
+  DEFAULT_RESULT_CAP,
   MAX_BULK_TOWNS,
-  MAX_REQUESTS_PER_TOWN,
   parseTownList,
   RADIUS_OPTIONS,
+  requestsPerTown,
+  RESULT_CAPS,
   STATES,
   TRADE_PRESETS,
   type SearchSummary,
@@ -32,6 +35,8 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
   const [townsText, setTownsText] = useState("");
   const [state, setState] = useState<State>("MA");
   const [radiusM, setRadiusM] = useState(DEFAULT_RADIUS_METERS);
+  const [maxResults, setMaxResults] = useState<number>(DEFAULT_RESULT_CAP);
+  const [saveMessage, setSaveMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [usage, setUsage] = useState(initialUsage);
   const [running, setRunning] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -41,7 +46,8 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
   const trade = (tradeChoice === CUSTOM ? customTrade : tradeChoice).trim();
   const bulk = parseTownList(townsText, state);
   const towns: Town[] = mode === "single" ? (city.trim() ? [{ city: city.trim(), state }] : []) : bulk.towns;
-  const estimate = towns.length * MAX_REQUESTS_PER_TOWN;
+  const perTown = requestsPerTown(maxResults);
+  const estimate = towns.length * perTown;
   const remaining = Math.max(0, usage.limit - usage.used);
 
   function updateResult(index: number, patch: Partial<TownResult>) {
@@ -70,7 +76,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
       }
       updateResult(i, { status: "running" });
 
-      const outcome = await searchTown({ trade, ...towns[i], radiusM });
+      const outcome = await searchTown({ trade, ...towns[i], radiusM, maxResults });
       if (outcome.usage) setUsage(outcome.usage);
 
       if (outcome.ok) {
@@ -94,6 +100,29 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
     router.refresh(); // update recent searches and stale count
     // New leads with websites join the scoring queue; start working through it.
     if (newLeads > 0) scoring.start();
+  }
+
+  /** Saves the trade and each town as a target the daily job searches. */
+  async function saveTargets() {
+    setSaveMessage(null);
+    if (trade.length < 2) return setSaveMessage({ text: "Choose a trade or type a custom one.", error: true });
+    if (towns.length === 0) return setSaveMessage({ text: "Enter a town first.", error: true });
+    const notes: string[] = [];
+    let saved = 0;
+    for (const town of towns) {
+      const response = await fetch("/api/targets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade, ...town, radiusM, maxResults }),
+      });
+      if (response.ok) saved++;
+      else notes.push((await response.json().catch(() => ({}))).error ?? `Could not save ${town.city}.`);
+    }
+    setSaveMessage({
+      text: `${saved} saved as daily target${saved === 1 ? "" : "s"}.${notes.length ? ` ${notes.join(" ")}` : ""}`,
+      error: saved === 0 && notes.length > 0,
+    });
+    if (saved) router.refresh();
   }
 
   function skipFrom(start: number, message: string) {
@@ -131,13 +160,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
             <label htmlFor="trade" className="field-label">
               Trade
             </label>
-            <select
-              id="trade"
-              className="field-input"
-              value={tradeChoice}
-              onChange={(e) => setTradeChoice(e.target.value)}
-              disabled={running}
-            >
+            <select id="trade" className="field-input" value={tradeChoice} onChange={(e) => setTradeChoice(e.target.value)} disabled={running}>
               {TRADE_PRESETS.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -196,8 +219,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
                 disabled={running}
               />
               <p id="towns-hint" className="mt-1 text-sm text-muted">
-                Add &quot;, NH&quot; or &quot;, RI&quot; to override the state below. Up to {MAX_BULK_TOWNS} towns; they run
-                one after another.
+                Add &quot;, NH&quot; or &quot;, RI&quot; to override the state below. Up to {MAX_BULK_TOWNS} towns; they run one after another.
               </p>
             </div>
           )}
@@ -205,13 +227,7 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
             <label htmlFor="state" className="field-label">
               {mode === "single" ? "State" : "Default state"}
             </label>
-            <select
-              id="state"
-              className="field-input"
-              value={state}
-              onChange={(e) => setState(e.target.value as State)}
-              disabled={running}
-            >
+            <select id="state" className="field-input" value={state} onChange={(e) => setState(e.target.value as State)} disabled={running}>
               {STATES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -220,16 +236,22 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
             </select>
           </div>
           <div>
+            <label htmlFor="cap" className="field-label">
+              Results per town
+            </label>
+            <select id="cap" className="field-input" value={maxResults} onChange={(e) => setMaxResults(Number(e.target.value))} disabled={running}>
+              {RESULT_CAPS.map((cap) => (
+                <option key={cap} value={cap}>
+                  Up to {cap}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label htmlFor="radius" className="field-label">
               Radius
             </label>
-            <select
-              id="radius"
-              className="field-input"
-              value={radiusM}
-              onChange={(e) => setRadiusM(Number(e.target.value))}
-              disabled={running}
-            >
+            <select id="radius" className="field-input" value={radiusM} onChange={(e) => setRadiusM(Number(e.target.value))} disabled={running}>
               {RADIUS_OPTIONS.map((r) => (
                 <option key={r.meters} value={r.meters}>
                   {r.miles} miles
@@ -242,15 +264,13 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
         <div className="alert-info" aria-live="polite">
           <p>
             <strong>Estimate:</strong> up to {estimate} Places request{estimate === 1 ? "" : "s"}
-            {towns.length > 0 && ` (${towns.length} town${towns.length === 1 ? "" : "s"} × up to ${MAX_REQUESTS_PER_TOWN})`}.
+            {towns.length > 0 && ` (${towns.length} town${towns.length === 1 ? "" : "s"} × up to ${perTown})`}.
           </p>
           <p>
             Used today: {usage.used} of {usage.limit}. {remaining} left.
           </p>
           {estimate > remaining && remaining > 0 && (
-            <p className="mt-1 font-medium text-warning">
-              This may stop partway. Results from finished pages are still saved.
-            </p>
+            <p className="mt-1 font-medium text-warning">This may stop partway. Results from finished pages are still saved.</p>
           )}
         </div>
 
@@ -264,12 +284,16 @@ export function FindLeadsForm({ initialUsage }: { initialUsage: Usage }) {
           <button type="submit" className="btn-primary" disabled={running}>
             {running ? "Searching…" : "Find leads"}
           </button>
+          <button type="button" className="btn-secondary" onClick={saveTargets} disabled={running}>
+            Save as daily target{towns.length > 1 ? "s" : ""}
+          </button>
           {running && towns.length > 1 && (
             <button type="button" className="btn-secondary" onClick={() => (stopRequested.current = true)}>
               Stop after this town
             </button>
           )}
         </div>
+        <div aria-live="polite">{saveMessage && <p className={saveMessage.error ? "alert-error" : "alert-success"}>{saveMessage.text}</p>}</div>
       </form>
 
       {results.length > 0 && (
@@ -312,21 +336,34 @@ function TownResultCard({ result }: { result: TownResult }) {
   return (
     <details className="rounded-md border border-line p-3 text-sm">
       <summary className="cursor-pointer">
-        <span className="font-medium">{label}:</span> {summary.resultsFound} found, {summary.newLeads} new,{" "}
-        {summary.updatedLeads} already in list. {summary.requestsUsed} requests.
+        <span className="font-medium">{label}:</span> {summary.resultsFound} found, {summary.newLeads} new, {summary.updatedLeads} already in list.{" "}
+        {summary.requestsUsed} requests.
         {skipped.length > 0 && <span className="text-muted"> Skipped: {skipped.join(", ")}.</span>}
-        {message && <span className="font-medium text-warning"> {message}</span>}
+        {message && <span className="font-medium text-warning"> {message}</span>}{" "}
+        <Link href={`/leads?run=${summary.runId}`} className="btn-link">
+          View these leads
+        </Link>
       </summary>
       {summary.businesses.length > 0 && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left">
             <thead className="text-muted">
               <tr>
-                <th scope="col" className="py-1 pr-3 font-medium">Business</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Town</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Phone</th>
-                <th scope="col" className="py-1 pr-3 font-medium">Website</th>
-                <th scope="col" className="py-1 font-medium">Status</th>
+                <th scope="col" className="py-1 pr-3 font-medium">
+                  Business
+                </th>
+                <th scope="col" className="py-1 pr-3 font-medium">
+                  Town
+                </th>
+                <th scope="col" className="py-1 pr-3 font-medium">
+                  Phone
+                </th>
+                <th scope="col" className="py-1 pr-3 font-medium">
+                  Website
+                </th>
+                <th scope="col" className="py-1 font-medium">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -355,11 +392,9 @@ function TownResultCard({ result }: { result: TownResult }) {
   );
 }
 
-type SearchOutcome =
-  | { ok: true; summary: SearchSummary; usage: Usage }
-  | { ok: false; status: number; error: string; usage?: Usage };
+type SearchOutcome = { ok: true; summary: SearchSummary; usage: Usage } | { ok: false; status: number; error: string; usage?: Usage };
 
-async function searchTown(body: { trade: string; city: string; state: State; radiusM: number }): Promise<SearchOutcome> {
+async function searchTown(body: { trade: string; city: string; state: State; radiusM: number; maxResults: number }): Promise<SearchOutcome> {
   try {
     const response = await fetch("/api/search", {
       method: "POST",

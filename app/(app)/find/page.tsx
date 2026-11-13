@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FindLeadsForm } from "@/components/FindLeadsForm";
 import { PageHeader } from "@/components/PageHeader";
 import { RefreshStalePanel } from "@/components/RefreshStalePanel";
+import { TargetsPanel } from "@/components/TargetsPanel";
 import { formatDateTime, metersToMiles } from "@/lib/format";
 import { getPlacesConfig, getUsageToday } from "@/lib/places-usage";
 import { countStaleLeads } from "@/lib/refresh";
@@ -20,6 +22,7 @@ export default async function FindLeadsPage() {
     data = await Promise.all([
       getUsageToday(supabase, dailyLimit),
       countStaleLeads(supabase),
+      supabase.from("targets").select("*").order("created_at", { ascending: true }),
       supabase
         .from("search_runs")
         .select("id, trade, city, state, radius_m, results_found, new_leads_added, created_at")
@@ -37,8 +40,9 @@ export default async function FindLeadsPage() {
       </>
     );
   }
-  const [usage, staleCount, runsResult] = data;
+  const [usage, staleCount, targetsResult, runsResult] = data;
   const runs = runsResult.data ?? [];
+  const targets = targetsResult.data ?? [];
 
   return (
     <>
@@ -56,6 +60,8 @@ export default async function FindLeadsPage() {
         )}
 
         <FindLeadsForm initialUsage={usage} />
+
+        <TargetsPanel targets={targets} dailyLimit={dailyLimit} />
 
         <RefreshStalePanel staleCount={staleCount} />
 
@@ -80,6 +86,9 @@ export default async function FindLeadsPage() {
                     <th scope="col" className="text-right">
                       New
                     </th>
+                    <th scope="col">
+                      <span className="sr-only">Leads from this search</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -93,6 +102,11 @@ export default async function FindLeadsPage() {
                       <td className="whitespace-nowrap">{metersToMiles(run.radius_m)} mi</td>
                       <td className="text-right tabular-nums">{run.results_found}</td>
                       <td className="text-right tabular-nums">{run.new_leads_added}</td>
+                      <td className="text-right">
+                        <Link href={`/leads?run=${run.id}`} className="btn-link inline-flex min-h-11 items-center">
+                          View leads
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

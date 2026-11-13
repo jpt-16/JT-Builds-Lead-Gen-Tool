@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CloseIcon, SearchIcon } from "@/components/Icons";
 import { PillPopover } from "@/components/Popover";
 import { STATES } from "@/lib/find-leads-config";
-import { filtersToParams, SITE_FILTERS, type LeadFilters as Filters } from "@/lib/lead-query";
+import { filtersToParams, PHONE_FILTERS, SITE_FILTERS, type LeadFilters as Filters } from "@/lib/lead-query";
 import { LEAD_STATUSES, STATUS_LABELS } from "@/lib/leads-config";
 
 // Filter bar for the leads table: a search box and a row of pill dropdowns,
@@ -26,7 +26,7 @@ function rangeLabel(name: string, min?: number, max?: number) {
   return name;
 }
 
-export function LeadFilters({ filters, trades }: { filters: Filters; trades: string[] }) {
+export function LeadFilters({ filters, trades, runLabel }: { filters: Filters; trades: string[]; runLabel?: string | null }) {
   const removeHref = (keys: (keyof Filters)[]) => {
     const overrides = Object.fromEntries(keys.map((k) => [k, undefined]));
     const params = filtersToParams(filters, { ...overrides, page: 1 });
@@ -62,6 +62,11 @@ export function LeadFilters({ filters, trades }: { filters: Filters; trades: str
       href: removeHref(["scoreMin", "scoreMax"]),
     });
   }
+  if (filters.ratingMin !== undefined || filters.ratingMax !== undefined) {
+    chips.push({ label: rangeLabel("Rating", filters.ratingMin, filters.ratingMax), href: removeHref(["ratingMin", "ratingMax"]) });
+  }
+  if (filters.phone) chips.push({ label: PHONE_FILTERS[filters.phone], href: removeHref(["phone"]) });
+  if (filters.run) chips.push({ label: runLabel ? `From search: ${runLabel}` : "From one search", href: removeHref(["run"]) });
   if (filters.reviewsMin !== undefined || filters.reviewsMax !== undefined) {
     chips.push({
       label: rangeLabel("Reviews", filters.reviewsMin, filters.reviewsMax),
@@ -73,6 +78,7 @@ export function LeadFilters({ filters, trades }: { filters: Filters; trades: str
     <form method="get" action="/leads" className="space-y-3" aria-label="Filter leads">
       <input type="hidden" name="sort" value={filters.sort} />
       <input type="hidden" name="dir" value={filters.dir} />
+      {filters.run && <input type="hidden" name="run" value={filters.run} />}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:w-56">
@@ -172,6 +178,62 @@ export function LeadFilters({ filters, trades }: { filters: Filters; trades: str
               <span className="sr-only">Maximum site score</span>
               <input name="scoreMax" type="number" min={0} max={100} defaultValue={filters.scoreMax} placeholder="Max" className="field-input" />
             </label>
+          </fieldset>
+          <ApplyRow />
+        </PillPopover>
+
+        <PillPopover
+          id="f-rating"
+          label={rangeLabel("Rating", filters.ratingMin, filters.ratingMax)}
+          active={filters.ratingMin !== undefined || filters.ratingMax !== undefined}
+        >
+          <fieldset className="grid w-56 grid-cols-2 gap-3">
+            <legend className="field-label">Google rating (0 to 5)</legend>
+            <label>
+              <span className="sr-only">Minimum rating</span>
+              <input
+                name="ratingMin"
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                defaultValue={filters.ratingMin}
+                placeholder="Min"
+                className="field-input"
+              />
+            </label>
+            <label>
+              <span className="sr-only">Maximum rating</span>
+              <input
+                name="ratingMax"
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                defaultValue={filters.ratingMax}
+                placeholder="Max"
+                className="field-input"
+              />
+            </label>
+          </fieldset>
+          <ApplyRow />
+        </PillPopover>
+
+        <PillPopover id="f-phone" label={filters.phone ? PHONE_FILTERS[filters.phone] : "Phone"} active={Boolean(filters.phone)}>
+          <fieldset className="w-60 space-y-1">
+            <legend className="field-label mb-1">Phone number</legend>
+            {[["", "Any"], ...Object.entries(PHONE_FILTERS)].map(([value, label]) => (
+              <label key={value} className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-ink">
+                <input
+                  type="radio"
+                  name="phone"
+                  value={value}
+                  defaultChecked={(filters.phone ?? "") === value}
+                  className="size-4 accent-[var(--color-accent)]"
+                />
+                {label}
+              </label>
+            ))}
           </fieldset>
           <ApplyRow />
         </PillPopover>

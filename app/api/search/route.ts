@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getApiOwner, jsonError, parseJson, unexpectedError } from "@/lib/api";
-import { STATES } from "@/lib/find-leads-config";
+import { RESULT_CAPS, STATES } from "@/lib/find-leads-config";
 import { runSearch, TownNotFoundError } from "@/lib/find-leads";
 import { PlacesApiError } from "@/lib/places";
 import { DailyLimitError, getPlacesConfig } from "@/lib/places-usage";
@@ -21,6 +21,11 @@ const searchSchema = z.object({
   city: nameText,
   state: z.enum(STATES),
   radiusM: z.number().int().min(1000).max(50_000),
+  maxResults: z
+    .number()
+    .int()
+    .refine((n) => (RESULT_CAPS as readonly number[]).includes(n), "Choose 20, 40 or 60.")
+    .optional(),
 });
 
 /** POST /api/search: one Find leads search for one town. Bulk mode calls this once per town. */

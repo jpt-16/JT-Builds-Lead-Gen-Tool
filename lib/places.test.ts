@@ -18,6 +18,10 @@ const acme: Place = {
   userRatingCount: 6,
   googleMapsUri: "https://maps.google.com/?cid=1",
   businessStatus: "OPERATIONAL",
+  primaryType: "landscaper",
+  types: ["landscaper", "point_of_interest", "establishment"],
+  photos: [{ name: "p1" }, { name: "p2" }],
+  regularOpeningHours: { weekdayDescriptions: ["Monday: 8:00 AM - 5:00 PM"] },
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -45,7 +49,16 @@ describe("toLeadFields", () => {
       rating: 4.7,
       review_count: 6,
       has_website: false,
+      primary_type: "landscaper",
+      categories: ["landscaper"],
+      has_hours: true,
+      photo_count: 2,
     });
+  });
+
+  it("reads profile signals: no hours, no photos, only generic categories", () => {
+    const bare = toLeadFields({ id: "x", types: ["point_of_interest", "establishment"] });
+    expect(bare).toMatchObject({ primary_type: null, categories: [], has_hours: false, photo_count: 0 });
   });
 
   it("sets has_website from the website field", () => {

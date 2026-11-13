@@ -18,10 +18,19 @@ const PLACE_FIELDS = [
   "userRatingCount",
   "googleMapsUri",
   "businessStatus",
+  // Profile signals. Phone, website and rating already put these requests in
+  // the Enterprise tier, so these fields add no extra cost.
+  "types",
+  "primaryType",
+  "regularOpeningHours",
+  "photos",
 ];
 
 // location is only used to drop results outside the chosen radius; it is not stored.
-const SEARCH_FIELD_MASK = [...PLACE_FIELDS, "location"].map((f) => `places.${f}`).concat("nextPageToken").join(",");
+const SEARCH_FIELD_MASK = [...PLACE_FIELDS, "location"]
+  .map((f) => `places.${f}`)
+  .concat("nextPageToken")
+  .join(",");
 const DETAILS_FIELD_MASK = PLACE_FIELDS.join(",");
 // Locating a town only needs coordinates (Text Search Pro tier).
 const GEOCODE_FIELD_MASK = "places.location";
@@ -40,6 +49,11 @@ export type Place = {
   userRatingCount?: number;
   googleMapsUri?: string;
   businessStatus?: "OPERATIONAL" | "CLOSED_TEMPORARILY" | "CLOSED_PERMANENTLY";
+  types?: string[];
+  primaryType?: string;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  /** Google returns at most 10 photos per place. */
+  photos?: unknown[];
 };
 
 /** The Google-sourced lead columns. Everything here is refreshable. */
@@ -55,7 +69,18 @@ export type LeadGoogleFields = {
   rating: number | null;
   review_count: number;
   has_website: boolean;
+  /** Google's main category for the place, e.g. "plumber". */
+  primary_type: string | null;
+  /** All categories except the generic ones every place has. */
+  categories: string[];
+  /** False when the listing shows no opening hours. */
+  has_hours: boolean;
+  /** Photos on the listing, capped by Google at 10. */
+  photo_count: number;
 };
+
+// Present on nearly every place, so they say nothing about the business.
+const GENERIC_TYPES = new Set(["point_of_interest", "establishment"]);
 
 export class PlacesApiError extends Error {
   constructor(
@@ -94,10 +119,7 @@ async function placesRequest<T>(apiKey: string, path: string, fieldMask: string,
     } catch {
       // Non-JSON error body; the status code is enough.
     }
-    throw new PlacesApiError(
-      `Google Places API returned ${response.status}${detail ? `: ${detail}` : ""}`,
-      response.status,
-    );
+    throw new PlacesApiError(`Google Places API returned ${response.status}${detail ? `: ${detail}` : ""}`, response.status);
   }
 
   return (await response.json()) as T;
@@ -118,18 +140,13 @@ export async function searchTextPage(
   apiKey: string,
   params: { textQuery: string; center: LatLng; radiusM: number; pageToken?: string },
 ): Promise<{ places: Place[]; nextPageToken?: string }> {
-  const data = await placesRequest<{ places?: Place[]; nextPageToken?: string }>(
-    apiKey,
-    "/places:searchText",
-    SEARCH_FIELD_MASK,
-    {
-      textQuery: params.textQuery,
-      regionCode: "us",
-      pageSize: 20,
-      locationBias: { circle: { center: params.center, radius: params.radiusM } },
-      ...(params.pageToken ? { pageToken: params.pageToken } : {}),
-    },
-  );
+  const data = await placesRequest<{ places?: Place[]; nextPageToken?: string }>(apiKey, "/places:searchText", SEARCH_FIELD_MASK, {
+    textQuery: params.textQuery,
+    regionCode: "us",
+    pageSize: 20,
+    locationBias: { circle: { center: params.center, radius: params.radiusM } },
+    ...(params.pageToken ? { pageToken: params.pageToken } : {}),
+  });
   return { places: data.places ?? [], nextPageToken: data.nextPageToken || undefined };
 }
 
@@ -168,6 +185,10 @@ export function toLeadFields(place: Place): LeadGoogleFields {
     rating: typeof place.rating === "number" ? Math.round(place.rating * 10) / 10 : null,
     review_count: place.userRatingCount ?? 0,
     has_website: Boolean(website),
+    primary_type: place.primaryType ?? null,
+    categories: (place.types ?? []).filter((t) => !GENERIC_TYPES.has(t)),
+    has_hours: Boolean(place.regularOpeningHours),
+    photo_count: place.photos?.length ?? 0,
   };
 }
 

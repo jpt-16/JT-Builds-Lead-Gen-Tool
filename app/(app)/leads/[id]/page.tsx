@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SiteHealth } from "@/components/SiteHealth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { buildDrafts, type DraftLead } from "@/lib/drafts";
+import { gbpFacts } from "@/lib/gbp";
 import { formatDateTime, formatDay } from "@/lib/format";
 import { getGeminiConfig } from "@/lib/gemini";
 import { CHANNEL_LABELS, OUTCOME_LABELS } from "@/lib/leads-config";
@@ -90,6 +91,8 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
                 <span className="text-ink">None listed</span>
               )}
             </dd>
+            <dt className="text-muted">Google profile</dt>
+            <dd className="text-ink">{gbpFacts(lead).join(" · ") || "Not fetched yet. It fills in on the next search or refresh."}</dd>
             {lead.address && (
               <>
                 <dt className="text-muted">Address</dt>

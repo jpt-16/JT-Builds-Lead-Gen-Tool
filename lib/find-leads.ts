@@ -1,12 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import {
-  MAX_PAGES_PER_SEARCH,
-  type FoundBusiness,
-  type SearchSummary,
-  type State,
-} from "@/lib/find-leads-config";
+import { DEFAULT_RESULT_CAP, pagesForCap, type FoundBusiness, type SearchSummary, type State } from "@/lib/find-leads-config";
 import { recomputeDerived } from "@/lib/derived";
 import { planImport } from "@/lib/lead-import";
 import { distanceMeters, locateTown, searchTextPage, toLeadFields, type Place } from "@/lib/places";
@@ -15,7 +10,16 @@ import { buildSuppressionMatcher } from "@/lib/suppression";
 
 type Client = SupabaseClient<Database>;
 
-export type SearchInput = { trade: string; city: string; state: State; radiusM: number };
+export type SearchInput = {
+  trade: string;
+  city: string;
+  state: State;
+  radiusM: number;
+  /** Most results to keep for this town (20, 40 or 60). Fewer pages means fewer Google requests. */
+  maxResults?: number;
+  /** Set when a saved target started this search. */
+  targetId?: string;
+};
 
 export class TownNotFoundError extends Error {
   constructor(city: string, state: string) {
@@ -32,24 +36,31 @@ export class TownNotFoundError extends Error {
 export async function runSearch(
   supabase: Client,
   input: SearchInput,
-  config: { apiKey: string; dailyLimit: number },
+  config: {
+    apiKey: string;
+    dailyLimit: number;
+    /** Only for the daily job, which has no signed-in user: the owner to write rows for. */
+    ownerId?: string;
+  },
 ): Promise<SearchSummary> {
-  const { apiKey, dailyLimit } = config;
+  const { apiKey, dailyLimit, ownerId } = config;
+  const asOwner = ownerId ? { owner_id: ownerId } : {};
+  const maxResults = input.maxResults ?? DEFAULT_RESULT_CAP;
   const query = `${input.trade} in ${input.city}, ${input.state}`;
   let requestsUsed = 0;
   let limitReached = false;
 
   // Throws DailyLimitError straight away if nothing is left today.
-  let usage = await reservePlacesRequest(supabase, dailyLimit);
+  let usage = await reservePlacesRequest(supabase, dailyLimit, ownerId);
   requestsUsed++;
   const center = await locateTown(apiKey, input.city, input.state);
   if (!center) throw new TownNotFoundError(input.city, input.state);
 
   const places: Place[] = [];
   let pageToken: string | undefined;
-  for (let page = 0; page < MAX_PAGES_PER_SEARCH; page++) {
+  for (let page = 0; page < pagesForCap(maxResults); page++) {
     try {
-      usage = await reservePlacesRequest(supabase, dailyLimit);
+      usage = await reservePlacesRequest(supabase, dailyLimit, ownerId);
     } catch (error) {
       if (!(error instanceof DailyLimitError)) throw error;
       usage = error.usage;
@@ -70,11 +81,17 @@ export async function runSearch(
   let skippedOutsideRadius = 0;
   // The same place can appear on two pages; keep the first copy.
   const seen = new Set<string>();
-  const unique = places.filter((place) => {
-    if (seen.has(place.id)) return false;
-    seen.add(place.id);
-    return true;
-  });
+  const unique = places
+    .filter((place) => {
+      if (seen.has(place.id)) return false;
+      seen.add(place.id);
+      return true;
+    })
+    .slice(0, maxResults);
+  // Position in Google's own results for this search: a stand-in for how
+  // visible the business is locally. Taken before closed and far-away places
+  // are dropped, so it matches what a searcher would have seen.
+  const ranks = new Map(unique.map((place, index) => [place.id, index + 1]));
   const kept = unique.filter((place) => {
     if (place.businessStatus === "CLOSED_PERMANENTLY") {
       skippedClosed++;
@@ -91,11 +108,36 @@ export async function runSearch(
   const [suppressionResult, existingResult] = await Promise.all([
     supabase.from("suppression").select("phone, email, business_name"),
     leads.length
-      ? supabase.from("leads").select("place_id, website_url").in("place_id", leads.map((l) => l.place_id))
+      ? supabase
+          .from("leads")
+          .select("place_id, website_url")
+          .in(
+            "place_id",
+            leads.map((l) => l.place_id),
+          )
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (suppressionResult.error) throw new Error(`Could not load suppression list: ${suppressionResult.error.message}`);
   if (existingResult.error) throw new Error(`Could not check existing leads: ${existingResult.error.message}`);
+
+  // The run row comes first so new leads can point at it. Its counts are
+  // finished once the leads are saved.
+  const { data: run, error: runError } = await supabase
+    .from("search_runs")
+    .insert({
+      ...asOwner,
+      trade: input.trade,
+      city: input.city,
+      state: input.state,
+      radius_m: input.radiusM,
+      results_found: leads.length,
+      new_leads_added: 0,
+      max_results: maxResults,
+      target_id: input.targetId ?? null,
+    })
+    .select("id")
+    .single();
+  if (runError || !run) throw new Error(`Could not record the search run: ${runError?.message ?? "no row returned"}`);
 
   const plan = planImport(leads, {
     existing: new Map((existingResult.data ?? []).map((r) => [r.place_id, r.website_url])),
@@ -103,6 +145,8 @@ export async function runSearch(
     trade: input.trade,
     sourceQuery: query,
     now: new Date(),
+    runId: run.id,
+    ranks,
   });
 
   // ignoreDuplicates makes this ON CONFLICT DO NOTHING, so a lead added by a
@@ -111,7 +155,10 @@ export async function runSearch(
   if (plan.inserts.length) {
     const { data, error } = await supabase
       .from("leads")
-      .upsert(plan.inserts, { onConflict: "place_id", ignoreDuplicates: true })
+      .upsert(
+        plan.inserts.map((row) => ({ ...row, ...asOwner })),
+        { onConflict: "place_id", ignoreDuplicates: true },
+      )
       .select("place_id");
     if (error) throw new Error(`Could not save new leads: ${error.message}`);
     for (const row of data ?? []) insertedIds.add(row.place_id);
@@ -123,21 +170,18 @@ export async function runSearch(
   const websiteSame = plan.updates.filter((u) => !("score_total" in u));
   for (const group of [websiteChanged, websiteSame]) {
     if (!group.length) continue;
-    const { error } = await supabase.from("leads").upsert(group, { onConflict: "place_id" });
+    // An upsert is an insert first, so it needs an owner even when the row exists.
+    const { error } = await supabase.from("leads").upsert(
+      group.map((row) => ({ ...row, ...asOwner })),
+      { onConflict: "place_id" },
+    );
     if (error) throw new Error(`Could not refresh existing leads: ${error.message}`);
   }
 
   await recomputeDerived(supabase, { placeIds: [...insertedIds, ...plan.updates.map((u) => u.place_id)] });
 
-  const { error: runError } = await supabase.from("search_runs").insert({
-    trade: input.trade,
-    city: input.city,
-    state: input.state,
-    radius_m: input.radiusM,
-    results_found: leads.length,
-    new_leads_added: insertedIds.size,
-  });
-  if (runError) throw new Error(`Could not record the search run: ${runError.message}`);
+  const { error: countError } = await supabase.from("search_runs").update({ new_leads_added: insertedIds.size }).eq("id", run.id);
+  if (countError) throw new Error(`Could not record the search run: ${countError.message}`);
 
   const businesses: FoundBusiness[] = [...plan.inserts, ...plan.updates].map((lead) => ({
     place_id: lead.place_id,
@@ -149,6 +193,7 @@ export async function runSearch(
   }));
 
   return {
+    runId: run.id,
     query,
     resultsFound: leads.length,
     newLeads: insertedIds.size,

@@ -23,6 +23,7 @@ You already have a project ("JT-Builds-Lead-Gen-Tool"). To start fresh on a new 
   4. `20261007234951_scoring.sql`
   5. `20261008003320_lead_funnel.sql`
   6. `20261016222802_cron_places_reserve.sql`
+  7. `20261113120000_search_upgrade.sql`
 - [ ] **Lock signup to your email.** Open `supabase/setup/set_allowed_email.sql`, put your address in place of `you@example.com`, and run it. Until you do, every signup is rejected.
 - [ ] **Auth settings** (Authentication in the dashboard):
   - Email provider is on, and "Confirm email" is on.

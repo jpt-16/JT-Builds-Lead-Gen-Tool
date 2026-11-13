@@ -17,11 +17,16 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const filters = parseLeadFilters(params);
   const supabase = await createClient();
   const from = (filters.page - 1) * PAGE_SIZE;
+  const runQuery = filters.run
+    ? supabase.from("search_runs").select("trade, city, state").eq("id", filters.run).maybeSingle()
+    : Promise.resolve({ data: null });
 
-  const [result, tradesResult] = await Promise.all([
+  const [result, tradesResult, runResult] = await Promise.all([
     buildLeadsQuery(supabase, filters, COLUMNS, { count: true }).range(from, from + PAGE_SIZE - 1),
     supabase.from("leads").select("trade").not("trade", "is", null).limit(10_000),
+    runQuery,
   ]);
+  const runLabel = runResult.data ? `${runResult.data.trade} in ${runResult.data.city}, ${runResult.data.state}` : null;
   if (result.error) {
     console.error("leads page:", result.error.message);
     return (
@@ -59,7 +64,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
       />
 
       <div className="space-y-4">
-        <LeadFilters filters={filters} trades={trades} />
+        <LeadFilters filters={filters} trades={trades} runLabel={runLabel} />
 
         <LeadsTable
           rows={rows}

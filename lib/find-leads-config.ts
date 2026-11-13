@@ -27,6 +27,21 @@ export const DEFAULT_RADIUS_METERS = RADIUS_OPTIONS[1].meters;
 export const MAX_PAGES_PER_SEARCH = 3;
 // One request to locate the town, then up to MAX_PAGES_PER_SEARCH result pages.
 export const MAX_REQUESTS_PER_TOWN = 1 + MAX_PAGES_PER_SEARCH;
+
+// The cap on results per town. Each page of 20 is one Google request.
+export const RESULT_CAPS = [20, 40, 60] as const;
+export type ResultCap = (typeof RESULT_CAPS)[number];
+export const DEFAULT_RESULT_CAP: ResultCap = 40;
+
+/** Result pages needed to reach `cap` results. */
+export function pagesForCap(cap: number): number {
+  return Math.min(MAX_PAGES_PER_SEARCH, Math.max(1, Math.ceil(cap / 20)));
+}
+
+/** Google requests for one town: one to locate it, then one per page. */
+export function requestsPerTown(cap: number): number {
+  return 1 + pagesForCap(cap);
+}
 export const MAX_BULK_TOWNS = 25;
 
 export type Town = { city: string; state: State };
@@ -81,6 +96,8 @@ export type FoundBusiness = {
 };
 
 export type SearchSummary = {
+  /** The search_runs row this search created. */
+  runId: string;
   query: string;
   resultsFound: number;
   newLeads: number;

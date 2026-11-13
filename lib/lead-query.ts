@@ -30,6 +30,11 @@ export const SITE_FILTERS = {
 } as const;
 export type SiteFilter = keyof typeof SITE_FILTERS;
 
+export const PHONE_FILTERS = { has: "Has a phone number", none: "No phone number" } as const;
+export type PhoneFilter = keyof typeof PHONE_FILTERS;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type LeadFilters = {
   q?: string;
   trade?: string;
@@ -41,6 +46,12 @@ export type LeadFilters = {
   scoreMax?: number;
   reviewsMin?: number;
   reviewsMax?: number;
+  /** Google star rating, 0 to 5. */
+  ratingMin?: number;
+  ratingMax?: number;
+  phone?: PhoneFilter;
+  /** Only leads first found by this search (a search_runs id). */
+  run?: string;
   sort: SortKey;
   dir: "asc" | "desc";
   page: number;
@@ -62,12 +73,21 @@ function int(params: Params, key: string, min: number, max: number): number | un
   return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : undefined;
 }
 
+function decimal(params: Params, key: string, min: number, max: number): number | undefined {
+  const value = one(params, key);
+  if (value === undefined) return undefined;
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) ? Math.round(Math.max(min, Math.min(max, n)) * 10) / 10 : undefined;
+}
+
 export function parseLeadFilters(params: Params): LeadFilters {
   const sortParam = one(params, "sort");
   const sort: SortKey = sortParam && sortParam in SORTS ? (sortParam as SortKey) : "priority";
   const dirParam = one(params, "dir");
   const status = one(params, "status");
   const site = one(params, "site");
+  const phone = one(params, "phone");
+  const run = one(params, "run");
   const ids = one(params, "ids")
     ?.split(",")
     .filter((id) => /^[0-9a-f-]{36}$/i.test(id));
@@ -83,6 +103,10 @@ export function parseLeadFilters(params: Params): LeadFilters {
     scoreMax: int(params, "scoreMax", 0, 100),
     reviewsMin: int(params, "reviewsMin", 0, 1_000_000),
     reviewsMax: int(params, "reviewsMax", 0, 1_000_000),
+    ratingMin: decimal(params, "ratingMin", 0, 5),
+    ratingMax: decimal(params, "ratingMax", 0, 5),
+    phone: phone && phone in PHONE_FILTERS ? (phone as PhoneFilter) : undefined,
+    run: run && UUID_PATTERN.test(run) ? run : undefined,
     sort,
     dir: dirParam === "asc" || dirParam === "desc" ? dirParam : SORTS[sort].defaultDir,
     page: int(params, "page", 1, 10_000) ?? 1,
@@ -108,6 +132,10 @@ export const leadQuerySchema = z.object({
   scoreMax: num(100),
   reviewsMin: num(1_000_000),
   reviewsMax: num(1_000_000),
+  ratingMin: z.preprocess(blank, z.coerce.number().min(0).max(5).optional()),
+  ratingMax: z.preprocess(blank, z.coerce.number().min(0).max(5).optional()),
+  phone: z.preprocess(blank, z.enum(Object.keys(PHONE_FILTERS) as [PhoneFilter, ...PhoneFilter[]]).optional()),
+  run: z.preprocess(blank, z.string().regex(UUID_PATTERN, "run must be a search id").optional()),
   sort: z.preprocess(blank, z.enum(Object.keys(SORTS) as [SortKey, ...SortKey[]]).optional()),
   dir: z.preprocess(blank, z.enum(["asc", "desc"]).optional()),
   page: z.preprocess(blank, z.coerce.number().int().min(1).max(10_000).optional()),
@@ -145,6 +173,11 @@ export function buildLeadsQuery(supabase: Client, filters: LeadFilters, columns:
   if (filters.scoreMax !== undefined) query = query.lte("score_total", filters.scoreMax);
   if (filters.reviewsMin !== undefined) query = query.gte("review_count", filters.reviewsMin);
   if (filters.reviewsMax !== undefined) query = query.lte("review_count", filters.reviewsMax);
+  if (filters.ratingMin !== undefined) query = query.gte("rating", filters.ratingMin);
+  if (filters.ratingMax !== undefined) query = query.lte("rating", filters.ratingMax);
+  if (filters.phone === "has") query = query.not("phone", "is", null);
+  if (filters.phone === "none") query = query.is("phone", null);
+  if (filters.run) query = query.eq("search_run_id", filters.run);
 
   return query.order(SORTS[filters.sort].column, { ascending: filters.dir === "asc", nullsFirst: false }).order("id", { ascending: true });
 }

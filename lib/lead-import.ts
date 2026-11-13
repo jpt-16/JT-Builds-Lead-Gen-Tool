@@ -9,8 +9,11 @@ type ScoreReset = SiteFields & {
   score_error: null;
 };
 
-export type NewLeadRow = LeadGoogleFields & SiteFields & { trade: string; source_query: string };
-export type UpdateLeadRow = LeadGoogleFields & { last_refreshed_at: string } & Partial<ScoreReset>;
+/** Where a lead showed up in Google's results for a search. */
+type RankFields = { search_rank: number | null; search_rank_query: string | null };
+
+export type NewLeadRow = LeadGoogleFields & SiteFields & RankFields & { trade: string; source_query: string; search_run_id: string | null };
+export type UpdateLeadRow = LeadGoogleFields & RankFields & { last_refreshed_at: string } & Partial<ScoreReset>;
 
 /**
  * Fields that clear a lead's old website score and put it back in the
@@ -40,6 +43,10 @@ export function planImport(
     trade: string;
     sourceQuery: string;
     now: Date;
+    /** The search_runs row for this search. Stored on new leads only. */
+    runId?: string | null;
+    /** 1-based position of each place in Google's results. */
+    ranks?: Map<string, number>;
   },
 ) {
   const inserts: NewLeadRow[] = [];
@@ -56,15 +63,25 @@ export function planImport(
       continue;
     }
 
+    const rank: RankFields = { search_rank: opts.ranks?.get(lead.place_id) ?? null, search_rank_query: opts.sourceQuery };
+
     if (opts.existing.has(lead.place_id)) {
       const websiteChanged = (opts.existing.get(lead.place_id) ?? null) !== lead.website_url;
       updates.push({
         ...lead,
+        ...rank,
         last_refreshed_at: opts.now.toISOString(),
         ...(websiteChanged ? scoreReset(lead.website_url, opts.now) : {}),
       });
     } else {
-      inserts.push({ ...lead, ...initialSiteFields(lead.website_url, opts.now), trade: opts.trade, source_query: opts.sourceQuery });
+      inserts.push({
+        ...lead,
+        ...rank,
+        ...initialSiteFields(lead.website_url, opts.now),
+        trade: opts.trade,
+        source_query: opts.sourceQuery,
+        search_run_id: opts.runId ?? null,
+      });
     }
   }
 

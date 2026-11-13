@@ -40,6 +40,13 @@ export type Database = {
           scoring_started_at: string | null;
           score_attempts: number;
           score_error: string | null;
+          search_run_id: string | null;
+          search_rank: number | null;
+          search_rank_query: string | null;
+          primary_type: string | null;
+          categories: string[] | null;
+          has_hours: boolean | null;
+          photo_count: number | null;
         };
         Insert: {
           id?: string;
@@ -72,6 +79,13 @@ export type Database = {
           scoring_started_at?: string | null;
           score_attempts?: number;
           score_error?: string | null;
+          search_run_id?: string | null;
+          search_rank?: number | null;
+          search_rank_query?: string | null;
+          primary_type?: string | null;
+          categories?: string[] | null;
+          has_hours?: boolean | null;
+          photo_count?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
@@ -106,6 +120,38 @@ export type Database = {
           },
         ];
       };
+      targets: {
+        Row: {
+          id: string;
+          owner_id: string;
+          trade: string;
+          city: string;
+          state: string;
+          radius_m: number;
+          max_results: number;
+          active: boolean;
+          last_run_at: string | null;
+          last_run_found: number | null;
+          last_run_new: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id?: string;
+          trade: string;
+          city: string;
+          state: string;
+          radius_m?: number;
+          max_results?: number;
+          active?: boolean;
+          last_run_at?: string | null;
+          last_run_found?: number | null;
+          last_run_new?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["targets"]["Insert"]>;
+        Relationships: [];
+      };
       search_runs: {
         Row: {
           id: string;
@@ -117,6 +163,8 @@ export type Database = {
           results_found: number;
           new_leads_added: number;
           created_at: string;
+          max_results: number | null;
+          target_id: string | null;
         };
         Insert: {
           id?: string;
@@ -128,6 +176,8 @@ export type Database = {
           results_found?: number;
           new_leads_added?: number;
           created_at?: string;
+          max_results?: number | null;
+          target_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["search_runs"]["Insert"]>;
         Relationships: [];

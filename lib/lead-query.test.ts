@@ -52,6 +52,32 @@ describe("filtersToParams", () => {
   });
 });
 
+describe("rating, phone and search filters", () => {
+  const run = "4df0b52c-0f59-4747-be8d-8a1bfb4bf65b";
+
+  it("parses and clamps them", () => {
+    const f = parseLeadFilters({ ratingMin: "3.54", ratingMax: "9", phone: "has", run });
+    expect(f).toMatchObject({ ratingMin: 3.5, ratingMax: 5, phone: "has", run });
+  });
+
+  it("ignores junk and round-trips through links", () => {
+    expect(parseLeadFilters({ ratingMin: "abc", phone: "maybe", run: "not-a-uuid" })).toMatchObject({
+      ratingMin: undefined,
+      phone: undefined,
+      run: undefined,
+    });
+    const f = parseLeadFilters({ ratingMax: "4.2", phone: "none", run });
+    expect(parseLeadFilters(Object.fromEntries(filtersToParams(f)))).toMatchObject({ ratingMax: 4.2, phone: "none", run });
+  });
+
+  it("is strict in the export schema", () => {
+    expect(leadQuerySchema.safeParse({ ratingMin: "3.5", phone: "has", run }).success).toBe(true);
+    expect(leadQuerySchema.safeParse({ ratingMax: "6" }).success).toBe(false);
+    expect(leadQuerySchema.safeParse({ phone: "maybe" }).success).toBe(false);
+    expect(leadQuerySchema.safeParse({ run: "nope" }).success).toBe(false);
+  });
+});
+
 describe("leadQuerySchema", () => {
   const ok = (params: Record<string, string>) => leadQuerySchema.safeParse(params).success;
 

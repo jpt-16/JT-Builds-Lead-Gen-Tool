@@ -15,6 +15,10 @@ function lead(placeId: string, overrides: Partial<LeadGoogleFields> = {}): LeadG
     rating: null,
     review_count: 0,
     has_website: false,
+    primary_type: null,
+    categories: [],
+    has_hours: false,
+    photo_count: 0,
     ...overrides,
   };
 }
@@ -101,5 +105,30 @@ describe("planImport", () => {
     expect(plan.suppressed).toBe(2);
     expect(plan.inserts.map((l) => l.place_id)).toEqual(["c"]);
     expect(plan.updates).toEqual([]);
+  });
+
+  it("records the search and rank on new leads, and only the rank on existing ones", () => {
+    const plan = planImport([lead("a"), lead("b")], {
+      ...base,
+      existing: new Map([["b", null]]),
+      runId: "run-1",
+      ranks: new Map([
+        ["a", 1],
+        ["b", 7],
+      ]),
+    });
+    expect(plan.inserts[0]).toMatchObject({
+      place_id: "a",
+      search_run_id: "run-1",
+      search_rank: 1,
+      search_rank_query: "landscaper in Mansfield, MA",
+    });
+    expect(plan.updates[0]).toMatchObject({ place_id: "b", search_rank: 7, search_rank_query: "landscaper in Mansfield, MA" });
+    // The run that first found a lead is never overwritten.
+    expect(plan.updates[0]).not.toHaveProperty("search_run_id");
+  });
+
+  it("leaves rank empty when none was given", () => {
+    expect(planImport([lead("a")], base).inserts[0]).toMatchObject({ search_run_id: null, search_rank: null });
   });
 });

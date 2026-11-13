@@ -30,6 +30,7 @@ The layout borrows from analytics tools like Semrush: a dark sidebar with breadc
    - `20261007234951_scoring.sql`: website status and scoring-queue columns, and a bulk priority update function
    - `20261008003320_lead_funnel.sql`: one function that returns the dashboard funnel counts
    - `20261016222802_cron_places_reserve.sql`: a Places-quota function only the server's service key can run, for the daily job
+   - `20261113120000_search_upgrade.sql`: saved targets, the search each lead came from, Google profile signals and rank in results
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
@@ -44,10 +45,16 @@ The layout borrows from analytics tools like Semrush: a dark sidebar with breadc
 
 `/find` searches Google Places (New) for a trade in a town, one town or several in a row.
 
-- Each town costs up to 4 Places requests: 1 to locate the town, then up to 3 pages of 20 results (Google's maximum is 60 per query).
+- **Results per town** is a cap you choose: up to 20, 40 or 60 (default 40). Each town costs 1 Places request to locate it plus 1 per page of 20, so 2, 3 or 4 requests. Google's maximum is 60 results per query.
 - Results outside the chosen radius, permanently closed businesses and anything on the do-not-contact list are skipped.
 - Leads are matched on `place_id`. Re-running a search never creates duplicates and only refreshes the Google fields. `status`, `notes`, `trade`, contact dates and outreach history are never overwritten.
-- Every run is logged in `search_runs` and listed on the page.
+- Every run is logged in `search_runs` and listed on the page, with a **View leads** link. Each lead remembers the search that first found it (`search_run_id`), so you can see only the new leads from a run (`/leads?run=...`) or export just that search.
+- **Google profile signals** come back with every search and refresh at no extra cost, because the request is already in the phone-and-website pricing tier: the main category, all categories, whether the listing has opening hours, and how many photos it has (Google returns at most 10).
+- **Rank in results:** each lead stores its position in Google's own results for the search that found it (`search_rank`, with the query). This is a stand-in for local visibility, not Google's actual local pack, which depends on where the searcher is. Leads found before this update fill in the new fields the next time they show up in a search or are refreshed.
+
+### Saved targets
+
+On the Find page, **Save as daily target** stores a trade and town (or several towns) as a saved target. **Run now** searches one immediately. Targets can be paused or deleted; deleting one keeps the leads it found and your search history. A target counts against the same daily Google cap as everything else. The daily job will search active targets automatically once autopilot is turned on.
 
 ### Cost guardrail
 
@@ -152,7 +159,7 @@ Marking a lead do not contact (call list, lead page, or bulk) also adds its phon
 
 ### Leads table (`/leads`)
 
-A search box and filter pills (trade, status, location, website, site score range, review count range). Each pill opens a small panel; active filters show as chips you can remove one at a time. Sorting by any underlined column, and 50 per page. Filters live in the URL, so a filtered view can be bookmarked. The **Columns** pill hides columns you don't need; the choice is remembered in this browser. Site scores show as small coloured rings with the number inside.
+A search box and filter pills (trade, status, location, website, rating range, phone, site score range, review count range). Each pill opens a small panel; active filters show as chips you can remove one at a time. Sorting by any underlined column, and 50 per page. Filters live in the URL, so a filtered view can be bookmarked. The **Columns** pill hides columns you don't need; the choice is remembered in this browser. Site scores show as small coloured rings with the number inside.
 
 Bulk actions: add to queue (new leads only), set any status, or export the selection. **Export CSV** at the top exports everything matching the filters. The CSV defuses spreadsheet formulas in names and notes.
 
