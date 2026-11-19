@@ -26,7 +26,9 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
 
-  async function patch(body: Record<string, unknown>, done: string) {
+  const locked = lead.status === "do_not_contact";
+
+  async function patch(body: Record<string, unknown>, done: string | ((data: Record<string, unknown>) => string)) {
     setBusy(true);
     setMessage(null);
     try {
@@ -37,7 +39,7 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        setMessage({ text: done });
+        setMessage({ text: typeof done === "function" ? done(data) : done });
         router.refresh();
       } else {
         setMessage({ text: data.error ?? `Failed (${response.status}).`, error: true });
@@ -64,6 +66,20 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
     patch({ status: "do_not_contact" }, "Marked do not contact and added to the suppression list.");
   }
 
+  function removeFromList() {
+    if (
+      !window.confirm(
+        `Take ${lead.business_name} off the do-not-contact list? Only do this if they were added by mistake. They go back to New and can be contacted again.`,
+      )
+    )
+      return;
+    patch({ remove_from_dnc: true }, (data) =>
+      data.stillSuppressed
+        ? "Taken off the list and set back to New. Another do-not-contact entry with the same business name still applies, so they can't be queued."
+        : "Taken off the list and set back to New.",
+    );
+  }
+
   return (
     <form onSubmit={save} className="card space-y-4" aria-labelledby="edit-heading">
       <h2 id="edit-heading" className="text-base font-semibold text-ink">
@@ -72,7 +88,13 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <label>
           <span className="field-label">Status</span>
-          <select className="field-input" value={status} onChange={(e) => setStatus(e.target.value as LeadStatus)}>
+          <select
+            className="field-input"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as LeadStatus)}
+            disabled={locked}
+            aria-describedby={locked ? "dnc-note" : undefined}
+          >
             {LEAD_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABELS[s]}
@@ -97,12 +119,21 @@ export function LeadEditor({ lead }: { lead: EditableLead }) {
         <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? "Saving…" : "Save"}
         </button>
-        {lead.status !== "do_not_contact" && (
+        {locked ? (
+          <button type="button" className="btn-secondary" disabled={busy} onClick={removeFromList}>
+            Remove from do-not-contact list
+          </button>
+        ) : (
           <button type="button" className="btn-danger" disabled={busy} onClick={doNotContact}>
             Do not contact
           </button>
         )}
       </div>
+      {locked && (
+        <p id="dnc-note" className="alert-info">
+          This lead is on the do-not-contact list, so its status is locked and it gets no drafts. If it was a mistake, use the button above.
+        </p>
+      )}
       <div aria-live="polite">{message && <p className={message.error ? "alert-error" : "alert-success"}>{message.text}</p>}</div>
     </form>
   );

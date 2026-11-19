@@ -136,7 +136,9 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        const skipped = data.skipped ? ` ${data.skipped} skipped${action === "queue" ? " (not new, or on the do-not-contact list)" : ""}.` : "";
+        const skipped = data.skipped
+          ? ` ${data.skipped} skipped${action === "queue" ? " (not new, or on the do-not-contact list)" : action === "do_not_contact" ? "" : " (leads on the do-not-contact list can't be changed here)"}.`
+          : "";
         setMessage({ text: `Updated ${data.updated}.${skipped}` });
         setSelected(new Set());
         router.refresh();
@@ -288,7 +290,12 @@ export function LeadsTable(props: { rows: LeadRow[]; sort: SortKey; dir: "asc" |
                     {row.site_status && SITE_TEXT[row.site_status] ? (
                       <span className="text-ink-2">{SITE_TEXT[row.site_status]}</span>
                     ) : row.website_url ? (
-                      <a href={row.website_url} target="_blank" rel="noopener noreferrer" className="btn-link inline-flex min-h-11 min-w-11 items-center">
+                      <a
+                        href={row.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-link inline-flex min-h-11 min-w-11 items-center"
+                      >
                         Visit
                       </a>
                     ) : (

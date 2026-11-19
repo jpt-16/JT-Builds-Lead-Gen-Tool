@@ -155,7 +155,12 @@ Status only moves forward (a later no-answer doesn't undo "replied"), won and do
 
 ### Do not contact
 
-Marking a lead do not contact (call list, lead page, or bulk) also adds its phone and name to the `suppression` table. Find leads never re-imports a suppressed business, and "Add to queue" never queues one. Changing the status back later does not remove the suppression row.
+Marking a lead do not contact (call list, lead page, or bulk) also adds its phone and name to the `suppression` table. Find leads never re-imports a suppressed business, and "Add to queue" never queues one.
+
+- **The status is locked.** A lead on the list can't be moved to another status from the lead page or a bulk action. Bulk actions skip those leads and say how many they skipped.
+- **Mistakes:** the lead page has **Remove from do-not-contact list** (with a confirmation). It sets the lead back to New and deletes only the suppression rows made for that lead (same phone, or same name with no phone). If a different business with the same name is also on the list, the lead stays suppressed and the page says so.
+- **Failures fail safe.** The suppression row is written before the status changes, so a failure between the two leaves a lead protected but showing its old status, never the other way round.
+- Anything that sends email must check the `suppression` table itself, not just the status.
 
 ### Leads table (`/leads`)
 
