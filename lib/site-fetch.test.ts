@@ -74,6 +74,27 @@ describe("fetchHomepage", () => {
   });
 });
 
+describe("fetchHomepage refuses private addresses", () => {
+  it.each([
+    "http://[::ffff:127.0.0.1]/",
+    "http://[::ffff:169.254.169.254]/latest/meta-data/",
+    "http://[64:ff9b::7f00:1]/",
+    "http://[::1]/",
+    "http://127.1/",
+  ])("never requests %s", async (address) => {
+    const result = await fetchHomepage(new URL(address));
+    expect(result).toMatchObject({ kind: "dead", reason: "Website address points to a private network." });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops a redirect that points at a private address", async () => {
+    fetchMock.mockResolvedValueOnce(redirect("http://[::ffff:10.0.0.5]/admin"));
+    const result = await fetchHomepage(new URL("http://acme.example"));
+    expect(result).toMatchObject({ kind: "dead", reason: "Website address points to a private network." });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("isPrivateAddress", () => {
   it("flags private, loopback, link-local and metadata ranges", () => {
     for (const ip of ["10.0.0.1", "127.0.0.1", "172.16.5.4", "192.168.1.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "::ffff:10.0.0.1"]) {
