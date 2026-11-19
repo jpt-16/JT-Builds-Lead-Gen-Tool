@@ -25,8 +25,6 @@ export const DEFAULT_RADIUS_METERS = RADIUS_OPTIONS[1].meters;
 
 // Google returns at most 20 results per page and 60 per query, so 3 pages.
 export const MAX_PAGES_PER_SEARCH = 3;
-// One request to locate the town, then up to MAX_PAGES_PER_SEARCH result pages.
-export const MAX_REQUESTS_PER_TOWN = 1 + MAX_PAGES_PER_SEARCH;
 
 // The cap on results per town. Each page of 20 is one Google request.
 export const RESULT_CAPS = [20, 40, 60] as const;

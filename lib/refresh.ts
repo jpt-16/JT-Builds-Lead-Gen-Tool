@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { DEMO_PREFIX } from "@/lib/demo-data";
+import { DEMO_PREFIX } from "@/lib/leads-config";
 import { recomputeDerived } from "@/lib/derived";
 import { scoreReset } from "@/lib/lead-import";
 import { getPlaceDetails, toLeadFields } from "@/lib/places";

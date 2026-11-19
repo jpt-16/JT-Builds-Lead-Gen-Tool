@@ -1,4 +1,5 @@
 import type { Database, OutreachChannel, OutreachOutcome } from "@/lib/database.types";
+import { DEMO_PREFIX } from "@/lib/leads-config";
 import { computeScore, type ScoreBreakdown } from "@/lib/score-calc";
 import type { HomepageChecks } from "@/lib/site-analyze";
 
@@ -12,7 +13,7 @@ import type { HomepageChecks } from "@/lib/site-analyze";
 // Run with `npm run seed:demo`; remove with `npm run seed:demo:remove`.
 // Pure and dated from `now`, so it is easy to test.
 
-export const DEMO_PREFIX = "demo-";
+export { DEMO_PREFIX };
 
 type LeadInsert = Omit<Database["public"]["Tables"]["leads"]["Insert"], "owner_id" | "priority_score" | "why_this_lead">;
 
@@ -73,16 +74,79 @@ const GOOD_CHECKS: HomepageChecks = {
 // Google profile signals for each demo lead, in order: thin profiles for the
 // weakest leads, complete ones for the strong sites.
 const PROFILES: Pick<LeadInsert, "primary_type" | "categories" | "has_hours" | "photo_count" | "search_rank" | "search_rank_query">[] = [
-  { primary_type: "landscaper", categories: ["landscaper"], has_hours: false, photo_count: 0, search_rank: 14, search_rank_query: "landscaper in Mansfield, MA" },
-  { primary_type: "house_cleaning_service", categories: ["house_cleaning_service"], has_hours: true, photo_count: 2, search_rank: 9, search_rank_query: "house cleaner in Nashua, NH" },
-  { primary_type: "plumber", categories: ["plumber"], has_hours: false, photo_count: 1, search_rank: 17, search_rank_query: "plumber in Warwick, RI" },
-  { primary_type: "car_detailer", categories: ["car_detailer", "car_wash"], has_hours: true, photo_count: 6, search_rank: 5, search_rank_query: "auto detailer in Taunton, MA" },
-  { primary_type: "general_contractor", categories: ["general_contractor"], has_hours: false, photo_count: 0, search_rank: 22, search_rank_query: "contractor in Manchester, NH" },
-  { primary_type: "hvac_contractor", categories: ["hvac_contractor"], has_hours: true, photo_count: 10, search_rank: 4, search_rank_query: "HVAC in Providence, RI" },
-  { primary_type: "roofing_contractor", categories: ["roofing_contractor"], has_hours: true, photo_count: 10, search_rank: 2, search_rank_query: "roofer in Attleboro, MA" },
+  {
+    primary_type: "landscaper",
+    categories: ["landscaper"],
+    has_hours: false,
+    photo_count: 0,
+    search_rank: 14,
+    search_rank_query: "landscaper in Mansfield, MA",
+  },
+  {
+    primary_type: "house_cleaning_service",
+    categories: ["house_cleaning_service"],
+    has_hours: true,
+    photo_count: 2,
+    search_rank: 9,
+    search_rank_query: "house cleaner in Nashua, NH",
+  },
+  {
+    primary_type: "plumber",
+    categories: ["plumber"],
+    has_hours: false,
+    photo_count: 1,
+    search_rank: 17,
+    search_rank_query: "plumber in Warwick, RI",
+  },
+  {
+    primary_type: "car_detailer",
+    categories: ["car_detailer", "car_wash"],
+    has_hours: true,
+    photo_count: 6,
+    search_rank: 5,
+    search_rank_query: "auto detailer in Taunton, MA",
+  },
+  {
+    primary_type: "general_contractor",
+    categories: ["general_contractor"],
+    has_hours: false,
+    photo_count: 0,
+    search_rank: 22,
+    search_rank_query: "contractor in Manchester, NH",
+  },
+  {
+    primary_type: "hvac_contractor",
+    categories: ["hvac_contractor"],
+    has_hours: true,
+    photo_count: 10,
+    search_rank: 4,
+    search_rank_query: "HVAC in Providence, RI",
+  },
+  {
+    primary_type: "roofing_contractor",
+    categories: ["roofing_contractor"],
+    has_hours: true,
+    photo_count: 10,
+    search_rank: 2,
+    search_rank_query: "roofer in Attleboro, MA",
+  },
   { primary_type: "painter", categories: ["painter"], has_hours: true, photo_count: 8, search_rank: 6, search_rank_query: "painter in Concord, NH" },
-  { primary_type: "electrician", categories: ["electrician"], has_hours: true, photo_count: 10, search_rank: 1, search_rank_query: "electrician in Newport, RI" },
-  { primary_type: "landscaper", categories: ["landscaper"], has_hours: true, photo_count: 4, search_rank: 8, search_rank_query: "landscaper in Franklin, MA" },
+  {
+    primary_type: "electrician",
+    categories: ["electrician"],
+    has_hours: true,
+    photo_count: 10,
+    search_rank: 1,
+    search_rank_query: "electrician in Newport, RI",
+  },
+  {
+    primary_type: "landscaper",
+    categories: ["landscaper"],
+    has_hours: true,
+    photo_count: 4,
+    search_rank: 8,
+    search_rank_query: "landscaper in Franklin, MA",
+  },
 ];
 
 export function buildDemoLeads(now: Date): DemoLead[] {

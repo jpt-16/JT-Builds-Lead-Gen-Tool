@@ -337,7 +337,7 @@ app/
   login/          sign-in and owner signup
 components/       shared UI
 lib/
-  supabase/       browser, server and proxy clients
+  supabase/       server, proxy and (cron-only) admin clients
   auth.ts         pure helpers: allowed email check, safe redirects
   session.ts      requireOwner() for server code
   database.types.ts

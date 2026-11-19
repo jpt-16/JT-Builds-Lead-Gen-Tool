@@ -58,6 +58,13 @@ export const OUTCOME_LABELS: Record<OutreachOutcome, string> = {
 /** Call list keyboard shortcuts 1 to 5, in this order. */
 export const QUICK_OUTCOMES = ["no_answer", "voicemail", "spoke", "interested", "booked"] as const satisfies readonly OutreachOutcome[];
 
+/**
+ * Demo leads (npm run seed:demo) have place_ids starting with this. They are
+ * fake, so the Google refresh skips them and the seed script only ever
+ * touches rows with this prefix.
+ */
+export const DEMO_PREFIX = "demo-";
+
 /** How many fresh leads the daily call list shows (follow-ups due are added on top). */
 export const CALL_LIST_SIZE = 30;
 
