@@ -30,8 +30,8 @@ The layout borrows from analytics tools like Semrush: a dark sidebar with breadc
    - `20261007234951_scoring.sql`: website status and scoring-queue columns, and a bulk priority update function
    - `20261008003320_lead_funnel.sql`: one function that returns the dashboard funnel counts
    - `20261016222802_cron_places_reserve.sql`: a Places-quota function only the server's service key can run, for the daily job
-   - `20261113115900_backup_before_prospecting_upgrade.sql`: copies your data tables into a private `backup` schema (nothing reads it; restore steps are in the file). Run before the next migration.
-   - `20261113120000_search_upgrade.sql`: saved targets, the search each lead came from, Google profile signals and rank in results
+   - `20261119182930_backup_before_prospecting_upgrade.sql`: copies your data tables into a private `backup` schema (nothing reads it; restore steps are in the file). Run before the next migration.
+   - `20261119183021_search_upgrade.sql`: saved targets, the search each lead came from, Google profile signals and rank in results
 3. Open `supabase/setup/set_allowed_email.sql`, replace the placeholder with your `ALLOWED_EMAIL`, and run it in the SQL editor. Until you do, the database rejects every signup.
 4. Auth settings (Authentication in the dashboard):
    - Email provider: enabled.
