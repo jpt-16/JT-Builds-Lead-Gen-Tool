@@ -281,6 +281,12 @@ In Supabase, go to **Authentication → URL Configuration**. Set the **Site URL*
 
 Supabase's built-in email service only sends a few messages an hour. If you hit "email rate limit exceeded", wait an hour, or add your own email service under **Authentication → SMTP Settings**.
 
+## Security headers
+
+Every response carries `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Strict-Transport-Security`. Production responses also carry a Content-Security-Policy (set in `next.config.ts`): nothing loads from another origin, the app can't be framed, forms post only to the app, and the browser never talks to Supabase directly. It keeps `'unsafe-inline'` for scripts and styles because Next.js writes inline scripts into every page; a nonce-based policy would need the proxy to mint a nonce per request. The policy is off in `npm run dev`, which needs eval for hot reload.
+
+If you add something that loads from outside (an analytics script, a font host, an embedded map), the browser console will show a "Content Security Policy" error and you'll need to allow that host in `next.config.ts`.
+
 ## API safety and tests
 
 - **Every route that takes input validates it with zod** and answers errors as `{ "error": "..." }` with a matching status code. Unexpected errors are logged on the server and the browser only sees "Something went wrong. Try again." No stack traces leave the server. The CSV export rejects bad filters with a 400.
